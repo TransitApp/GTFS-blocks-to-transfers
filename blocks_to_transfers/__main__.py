@@ -3,35 +3,43 @@ import ctypes
 import math
 import timeit
 
-from blocks_to_transfers.shape_similarity import LatLon, hausdorff
+from blocks_to_transfers.shape_similarity import trip_shapes_similar, compute_shapes_similar
 from . import editor, augment
 
 
 def main():
-    gtfs = editor.load('/Users/np/GTFSs/BCTWK_734/211_cleaned')
+    gtfs = editor.load('/Users/np/GTFSs/TSL_32/131_preprocessed')
     gtfs = augment.augment(gtfs)
 
-    shape_lats = {shape_id: [LatLon(pt.shape_pt_lat, pt.shape_pt_lon) for pt in pts] for shape_id, pts in gtfs.shapes.items()}
-
-
-    """
-    for a_id, a_pt in cleaned_shapes.items():
-        for b_id, b_pt in cleaned_shapes.items():
-            print(a_id, b_id, hausdorff(a_pt, b_pt))
-    """
-
-    haus_cache = {}
+    shape_similarity_cache = {}
     for block, trips in gtfs.trips_by_block.items():
         for i_trip, trip in enumerate(trips):
-            for trip2 in trips[i_trip+1:]:
-                if not trip.data.shape_id or not trip2.data.shape_id:
-                    continue
+            for cont_trip in trips[i_trip+1:]:
+                wait_time = cont_trip.first_departure - trip.last_arrival
+                if wait_time < 0:
+                    print('Block is corrupted!')
+                    break
 
-                key = (trip.data.shape_id, trip2.data.shape_id)
-                rkey = (trip2.data.shape_id, trip.data.shape_id)
-                if key not in haus_cache and rkey not in haus_cache:
-                    haus_cache[key] = hausdorff(shape_lats[trip.data.shape_id], shape_lats[trip2.data.shape_id])
-                    print('eval', key, haus_cache[key])
+                if wait_time > 600:
+                    #print('wait too long')
+                    break
+
+                similarity = compute_shapes_similar(trip.shape, cont_trip.shape)
+                if trip.shape_id != cont_trip.shape_id:
+                    print(trip.route_id, cont_trip.route_id, similarity)
+                """
+                if trip.shape_id != cont_trip.shape_id:
+                    similarity = trip_shapes_similar(gtfs, shape_similarity_cache, trip, cont_trip)
+                    c1 = trip.shape_id.split('-')[1]
+                    c2 = cont_trip.shape_id.split('-')[1]
+                    if not similarity and c1 == c2:
+                        print(trip.shape_id, cont_trip.shape_id, similarity)
+                break
+                    # Surprising differences
+                """
+
+
+
 
 
     #editor.patch(gtfs, gtfs_in_dir='/Users/np/GTFSs/BCTWK_734/211_cleaned', gtfs_out_dir='mimi')

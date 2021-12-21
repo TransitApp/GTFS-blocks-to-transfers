@@ -1,39 +1,67 @@
 from math import *
-# NIST Percentile estimation: https://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
 
 
+def trip_shapes_similar(gtfs, similar_shapes, trip_a, trip_b):
+    cache_key = tuple(sorted((get_key(trip_a), get_key(trip_b))))
+    cache_value = similar_shapes.get(cache_key)
+    if cache_value is not None:
+        return cache_value
+    else:
+        similar_shapes[cache_key] = compute_shapes_similar(trip_a.shape, trip_b.shape)
+        return similar_shapes[cache_key]
 
 
-def hausdorff(shape_a, shape_b):
-    return max(directed_hausdorff(shape_a, shape_b), directed_hausdorff(shape_b, shape_a))
+def get_key(trip):
+    return f'stop_times:{trip.trip_id}'
 
 
-def directed_hausdorff(shape_a, shape_b):
-    d_max_min = 0
+def compute_shapes_similar(shape_a, shape_b):
+    return hausdorff_percentile(shape_a, shape_b, threshold=.8) < 100  # meters
 
-    for a in shape_a:
+
+def hausdorff_percentile(shape_a, shape_b, threshold):
+    dists = dist_point_to_nearest_segment(shape_points=shape_a, shape_segments=shape_b)
+    dists.extend(dist_point_to_nearest_segment(shape_points=shape_b, shape_segments=shape_a))
+    return percentile(dists, threshold)
+
+
+def percentile(values, threshold):
+    # Percentile interpolation is based on: https://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
+    values.sort()
+    float_index = threshold * (len(values) + 1)
+    index, interpolation_factor = int(float_index // 1), float_index % 1
+
+    if index == 0:
+        return values[0]
+
+    if index >= len(values):
+        return values[-1]
+
+    return values[index - 1] + interpolation_factor * (values[index] - values[index - 1])
+
+
+def dist_point_to_nearest_segment(shape_points, shape_segments):
+    """
+    For each point in the first shape, return the closest distance from that point to any point on the second shape.
+    """
+    dists = []
+    for pt in shape_points:
         d_nearest_segment = inf
+        for i_seg in range(len(shape_segments) - 1):
+            d_point_segment = pt.dist_to_segment(shape_segments[i_seg], shape_segments[i_seg + 1])
+            if d_point_segment < d_nearest_segment:
+                d_nearest_segment = d_point_segment
 
+        dists.append(d_nearest_segment)
 
-        for i_b in range(len(shape_b) - 1):
-            d_ab = a.dist_to_segment(shape_b[i_b], shape_b[i_b + 1])
-            if d_ab < d_nearest_segment:
-                d_nearest_segment = d_ab
-                #nearest_segment = (shape_b[i_b].geojson(), shape_b[i_b + 1].geojson())
-
-        if d_nearest_segment > d_max_min:
-            d_max_min = d_nearest_segment
-            #furthest_pair = (a.geojson(), nearest_segment)
-
-    #print(furthest_pair[0], furthest_pair[1][0], furthest_pair[1][1], d_max_min)
-    return d_max_min
-
+    return dists
 
 class LatLon:
     # Sources:
     # http://www.movable-type.co.uk/scripts/gis-faq-5.1.html
     # http://www.movable-type.co.uk/scripts/latlong.html
     EARTH_RADIUS_M = 6_371_009.0
+    __slots__ = ('lat', 'lon')
 
     def __init__(self, lat, lon, unit=degrees):
         self.lat = radians(lat) if unit == degrees else lat
