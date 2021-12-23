@@ -9,4 +9,14 @@ def test_percentile():
     print(statistics.median(data))
     print(percentile(data, .5))
 
-test_percentile()
+
+"""
+          if trip.shape_id != cont_trip.shape_id:
+              similarity = trip_shapes_similar(gtfs, shape_similarity_cache, trip, cont_trip)
+              c1 = trip.shape_id.split('-')[1]
+              c2 = cont_trip.shape_id.split('-')[1]
+              if not similarity and c1 == c2:
+                  print(trip.shape_id, cont_trip.shape_id, similarity)
+          break
+              # Surprising differences
+          """

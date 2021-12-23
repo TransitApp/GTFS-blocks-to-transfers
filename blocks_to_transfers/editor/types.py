@@ -3,6 +3,9 @@ from datetime import datetime
 
 class GTFSTime(int):
     def __new__(cls, time_str):
+        if isinstance(time_str, int):
+            return super().__new__(cls, time_str)
+
         if time_str == '':
             return super().__new__(cls, -1)
 
@@ -18,6 +21,9 @@ class GTFSTime(int):
         mins, secs = divmod(rem, 60)
         return '%02d:%02d:%02d' % (hours, mins, secs)
 
+    def __sub__(self, other):
+        return GTFSTime(super().__sub__(other))
+
 
 class GTFSDate(datetime):
     def __new__(cls, *args, **kwargs):
@@ -32,9 +38,11 @@ class GTFSDate(datetime):
         except ValueError:
             return cls.strptime(iso_str, '%Y%m%d')
 
-    def __str__(self):
+    def __repr__(self):
         return self.strftime('%Y-%m-%d')
 
+    def __str__(self):
+        return repr(self)
 
 def as_bool(bool_str):
     return bool(int(bool_str))

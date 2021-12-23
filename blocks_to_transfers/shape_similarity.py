@@ -1,23 +1,23 @@
+from . import config
 from math import *
 
 
-def trip_shapes_similar(gtfs, similar_shapes, trip_a, trip_b):
-    cache_key = tuple(sorted((get_key(trip_a), get_key(trip_b))))
-    cache_value = similar_shapes.get(cache_key)
+def trip_shapes_similar(similarity_results, shape_a, shape_b):
+    if shape_a is shape_b:
+        return True
+
+    cache_key = tuple(sorted((id(shape_a), id(shape_b))))
+    cache_value = similarity_results.get(cache_key)
+
     if cache_value is not None:
         return cache_value
     else:
-        similar_shapes[cache_key] = compute_shapes_similar(trip_a.shape, trip_b.shape)
-        return similar_shapes[cache_key]
-
-
-def get_key(trip):
-    return f'stop_times:{trip.trip_id}'
+        return similarity_results.setdefault(cache_key, compute_shapes_similar(shape_a, shape_b))
 
 
 def compute_shapes_similar(shape_a, shape_b):
-    return hausdorff_percentile(shape_a, shape_b, threshold=.8) < 100  # meters
-
+    return hausdorff_percentile(shape_a, shape_b,
+                                threshold=config.InSeatTransfers.similarity_percentile) < config.InSeatTransfers.similarity_distance
 
 def hausdorff_percentile(shape_a, shape_b, threshold):
     dists = dist_point_to_nearest_segment(shape_points=shape_a, shape_segments=shape_b)
@@ -118,3 +118,9 @@ class LatLon:
         else:
             # closest point is l1, l2 depending on which end is nearer to x
             return LatLon.EARTH_RADIUS_M * min(d_l1_x, d_l2_x)
+
+    def __eq__(self, other):
+        return self.lat == other.lat and self.lon == other.lon
+
+    def __hash__(self):
+        return hash((self.lat, self.lon))

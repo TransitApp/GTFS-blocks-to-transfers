@@ -1,38 +1,26 @@
-import math
+from collections import namedtuple
 from datetime import timedelta
+
+from . import config
 from .editor.schema import *
 from .shape_similarity import LatLon
 
 DAY_SEC = 86400
 
 
-class GTFSAugmented(Entity):
-    def __init__(self, gtfs, days_by_service, trips_by_block):
-        super().__init__(**gtfs)
-        self.days_by_service = days_by_service
-        self.trips_by_block = trips_by_block
-
-
-class TripAugmented(Entity):
-    def __init__(self, trip, first_departure, last_arrival, shifted_services):
-        super().__init__(**trip)
-        self.first_departure = first_departure
-        self.last_arrival = last_arrival
-        self.shifted_services = shifted_services
-        self.stop_shape = []
-        self.stop_shape_key = None
-
+GTFSAugmented = namedtuple('GTFSAugmented', ('gtfs', 'days_by_service', 'trips_by_block', 'shape_similarity_results'))
 
 def augment(gtfs):
-    augment_trips
-
-
-    return GTFSAugmented(gtfs,
-                         get_days_by_service(gtfs),
-                         group_trips_by_block(get_trip_stop_shapes(gtfget_trip_spans(gtfs)))
+    return GTFSAugmented(
+        gtfs,
+        get_days_by_service(gtfs),
+        group_trips_by_block(augment_trips(gtfs)),
+        {}
+    )
 
 
 def get_days_by_service(gtfs):
+    print('Calculating days by service')
     all_service_ids = gtfs.calendar.keys() | gtfs.calendar_dates.keys()
     days_by_service = {}
     weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -63,53 +51,52 @@ def get_days_by_service(gtfs):
     return days_by_service
 
 
-def get_trip_spans(gtfs):
-    trip_spans = []
-
-    for trip in gtfs.trips.values():
-        if trip.trip_id not in gtfs.stop_times:
-            print(trip.trip_id, 'is bogus')
+def augment_trips(gtfs):
+    print('Calculating trip timespans and stop shapes')
+    unique_shapes = {}
+    trips = []
+    for trip in list(gtfs.trips.values()):
+        if len(gtfs.stop_times.get(trip.trip_id, [])) < 2:
+            print(f'Warning: Trip {trip.trip_id} deleted as it has fewer than two stops.')
             continue
 
-        first_departure = gtfs.stop_times[trip.trip_id][0].departure_time
-        last_arrival = gtfs.stop_times[trip.trip_id][-1].arrival_time
-        day_shift = 0 if first_departure < DAY_SEC else DAY_SEC
-        trip_spans.append(TripAugmented(
-            trip,
-            first_departure - day_shift,
-            last_arrival - day_shift,
-            shifted_services=day_shift != 0
-        ))
+        set_span(gtfs, trip)
+        if config.InSeatTransfers.ignore_return_via_similar_trip:
+            set_shape(unique_shapes, gtfs, trip)
+        trips.append(trip)
 
-    trip_spans.sort(key=lambda trip: trip.first_departure)
-    return trip_spans
-
-def get_trip_stop_shapes(gtfs):
+    trips.sort(key=lambda trip: trip.first_departure)
+    return trips
 
 
+def set_span(gtfs, trip):
+    first_st = gtfs.stop_times[trip.trip_id][0]
+    last_st = gtfs.stop_times[trip.trip_id][-1]
+    day_shift = 0 if first_st.departure_time < DAY_SEC else DAY_SEC
 
-def get_trip_shape(gtfs, trip):
-    return [LatLon(gtfs.stops[st.stop_id].stop_lat, gtfs.stops[st.stop_id].stop_lon)
-            for st in gtfs.stop_times[trip.trip_id]]
+    trip.first_departure = first_st.departure_time - day_shift
+    trip.last_arrival = last_st.arrival_time - day_shift
+    trip.one_day_forward_of_service = day_shift != 0
 
-    if trip.shape_id:
-        pts = [LatLon(pt.shape_pt_lat, pt.shape_pt_lon) for pt in gtfs.shapes[trip.shape_id]]
-        """
-        simple_pts = [pts[0]]
-        eps = math.pi / 360
-        for i in range(len(pts) - 1):
-            if abs(pts[i].bearing_to(pts[i+1])) > eps:
-                simple_pts.append(pts[i+1])
-
-        if len(simple_pts) == 1:
-            simple_pts.append(pts[-1])
-        if len(simple_pts) < len(pts):
-            print('simplified', len(simple_pts), len(pts))
-        """
-        return pts
+    first_stop = gtfs.stops[first_st.stop_id]
+    trip.first_stop = LatLon(first_stop.stop_lat, first_stop.stop_lon)
+    last_stop = gtfs.stops[last_st.stop_id]
+    trip.last_stop = LatLon(last_stop.stop_lat, last_stop.stop_lon)
 
 
+def set_shape(unique_shapes, gtfs, trip):
+    """
+    A trip's shape can be used to predict whether or not the continuation is an in-seat transfer. For performance reasons,
+    we always use the trip's sequence of stops, even if a GTFS shape is provided for the trip,.
+    """
 
+    stop_shape = []
+    for stop_time in gtfs.stop_times[trip.trip_id]:
+        stop = gtfs.stops[stop_time.stop_id]
+        stop_shape.append(LatLon(stop.stop_lat, stop.stop_lon))
+
+    stop_shape = tuple(stop_shape)
+    trip.shape = unique_shapes.setdefault(stop_shape, stop_shape)
 
 
 def group_trips_by_block(trip_spans):

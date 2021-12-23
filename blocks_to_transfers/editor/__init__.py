@@ -9,11 +9,14 @@ def load(gtfs_dir):
     gtfs_dir = Path(gtfs_dir)
     gtfs = Entity()
     for file_schema in GTFS_SUBSET_SCHEMA.values():
+        print(f'Loading {file_schema.name}')
         filepath = gtfs_dir / file_schema.filename
         if not filepath.exists():
             if file_schema.required:
                 raise ValueError(f'{file_schema.filename}: required file is missing')
             else:
+                gtfs[file_schema.name] = ExportDict()
+                gtfs[file_schema.name]._exportable_fields = list(file_schema.fields.items())
                 continue
 
         with open(filepath, 'r', encoding='utf-8-sig') as f:

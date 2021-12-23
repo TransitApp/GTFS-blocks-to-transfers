@@ -95,8 +95,8 @@ GTFS_SUBSET_SCHEMA = Schema(
         required=False,
         group_sort_key='to_trip_id',
         fields=dict(
-            from_trip_id=Field(required=True),
-            to_trip_id=Field(required=True),
+            from_trip_id=Field(required=False),
+            to_trip_id=Field(required=False),
             transfer_type=Field(required=False, validator=as_enum(TransferType, default=TransferType.RECOMMENDED))
         )
     )
