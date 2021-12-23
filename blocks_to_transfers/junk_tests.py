@@ -1,6 +1,7 @@
 import statistics
 
 from blocks_to_transfers.shape_similarity import percentile
+from .editor import schema
 
 
 def test_percentile():
@@ -20,3 +21,6 @@ def test_percentile():
           break
               # Surprising differences
           """
+
+x = schema.Transfer(from_trip_id='wow')
+print(x)

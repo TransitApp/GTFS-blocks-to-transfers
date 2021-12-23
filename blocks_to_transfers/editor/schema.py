@@ -17,87 +17,73 @@ class TransferType(IntEnum):
     VEHICLE_CONTINUATION = 5
 
 
-GTFS_SUBSET_SCHEMA = Schema(
-    File(
-        id='service_id',
-        name='calendar',
-        required=False,
-        fields=dict(
-            service_id=Field(required=True),
-            monday=Field(required=True, validator=as_bool),
-            tuesday=Field(required=True, validator=as_bool),
-            wednesday=Field(required=True, validator=as_bool),
-            thursday=Field(required=True, validator=as_bool),
-            friday=Field(required=True, validator=as_bool),
-            saturday=Field(required=True, validator=as_bool),
-            sunday=Field(required=True, validator=as_bool),
-            start_date=Field(required=True, validator=GTFSDate),
-            end_date=Field(required=True, validator=GTFSDate),
-        )
-    ),
-    File(
-        id='service_id',
-        name='calendar_dates',
-        group_sort_key='date',
-        required=False,
-        fields=dict(
-            service_id=Field(required=True),
-            date=Field(required=True, validator=GTFSDate),
-            exception_type=Field(required=True, validator=as_enum(ExceptionType)),
-        )
-    ),
-    File(
-        id='trip_id',
-        name='trips',
-        fields=dict(
-            service_id=Field(required=True),
-            trip_id=Field(required=True),
-            block_id=Field(required=False),
-            shape_id=Field(required=False),
-        ),
-    ),
-    File(
-        id='stop_id',
-        name='stops',
-        fields=dict(
-            stop_id=Field(required=True),
-            stop_lat=Field(required=True, validator=as_lat),
-            stop_lon=Field(required=True, validator=as_lon)
-        )
-    ),
-    File(
-        id='shape_id',
-        name='shapes',
-        required=False,
-        group_sort_key='shape_pt_sequence',
-        fields=dict(
-            shape_id=Field(required=True),
-            shape_pt_lat=Field(required=True, validator=as_lat),
-            shape_pt_lon=Field(required=True, validator=as_lon),
-            shape_pt_sequence=Field(required=True,validator=int)
-        )
-    ),
-    File(
-        id='trip_id',
-        name='stop_times',
-        group_sort_key='stop_sequence',
-        fields=dict(
-            stop_id=Field(required=True),
-            trip_id=Field(required=True),
-            arrival_time=Field(required=False, validator=GTFSTime),
-            departure_time=Field(required=False, validator=GTFSTime),
-            stop_sequence=Field(required=True, validator=int),
-        )
-    ),
-    File(
-        id='from_trip_id',
-        name='transfers',
-        required=False,
-        group_sort_key='to_trip_id',
-        fields=dict(
-            from_trip_id=Field(required=False),
-            to_trip_id=Field(required=False),
-            transfer_type=Field(required=False, validator=as_enum(TransferType, default=TransferType.RECOMMENDED))
-        )
-    )
-)
+class Calendar(Entity):
+    SCHEMA = File(id='service_id', name='calendar', required=False)
+
+    service_id: str
+    monday: bool
+    tuesday: bool
+    wednesday: bool
+    thursday: bool
+    friday: bool
+    saturday: bool
+    sunday: bool
+    start_date: GTFSDate
+    end_date: GTFSDate
+
+
+class CalendarDate(Entity):
+    SCHEMA = File(id='service_id', name='calendar_dates', group_sort_key='date', required=False)
+
+    service_id: str
+    date: GTFSDate
+    exception_type: ExceptionType
+
+
+class Trip(Entity):
+    SCHEMA = File(id='trip_id', name='trips', required=True)
+
+    trip_id: str
+    service_id: str
+    shape_id: str = ''
+    block_id: str = ''
+    route_id: str
+
+
+# Currently not parsed for performance reasons
+class Shape(Entity):
+    SCHEMA = File(id='shape_id', name='shapes', required=False, group_sort_key='shape_pt_sequence')
+
+    shape_id: str
+    shape_pt_sequence: int
+    shape_pt_lat: float
+    shape_pt_lon: float
+
+
+class Stop(Entity):
+    SCHEMA = File(id='stop_id', name='stops', required=True)
+
+    stop_id: str
+    stop_lat: float
+    stop_lon: float
+
+
+class StopTime(Entity):
+    SCHEMA = File(id='trip_id', name='stop_times', required=True, group_sort_key='stop_sequence')
+
+    trip_id: str
+    stop_id: str
+    stop_sequence: int
+    arrival_time: GTFSTime = GTFSTime('')
+    departure_time: GTFSTime = GTFSTime('')
+
+
+class Transfer(Entity):
+    SCHEMA = File(id='from_trip_id', name='transfers', required=False, group_sort_key='to_trip_id')
+
+    from_trip_id: str = ''
+    to_trip_id: str = ''
+    transfer_type: TransferType = TransferType.RECOMMENDED
+
+
+GTFS_SUBSET_SCHEMA = Schema(Calendar, CalendarDate, Trip, Stop, StopTime, Transfer)

@@ -3,15 +3,14 @@ from datetime import timedelta
 from enum import Enum
 from . import config, shape_similarity
 from .augment import DAY_SEC
-from .editor.schema import TransferType
+from .editor import duplicate
+from .editor.schema import TransferType, Transfer
 
 """
 TODO: 
 1. test cases
 3. readme
-4. code cleanup
 5. midnight shift
-6. decide if trip must be split
 7. lookup existing services or make a new fake
 8. dupe trip
 """
@@ -51,7 +50,6 @@ def convert_block(data, trips):
 
 
         except StopIteration:
-            #print('stopit')
             # Will be raised once we know that there's no further trips to consider for transfers
             pass
 
@@ -62,20 +60,39 @@ def convert_block(data, trips):
         insert_transfers(data, trip, trip_transfers)
 
 
-def insert_transfers(data, trip, trip_transfers):
-    if not trip_transfers:
+def insert_transfers(data, from_trip, to_trips):
+    if not to_trips:
         return
 
-    if len(trip_transfers) == 1:
-        transfer = trip_transfers[0]
-        current_transfers = data.gtfs.transfers.setdefault(trip.trip_id, [])
-        current_transfers.append(dict(
-            from_trip_id=trip.trip_id,
-            to_trip_id=transfer.trip.trip_id,
-            transfer_type=transfer.transfer_type
-        ))
+    if len(to_trips) == 1:
+        insert_transfer(data, from_trip, to_trips[0])
         return
 
+    # There are 2+ continuations, depending on the day of service.
+    # For each transfer:
+    # (1) Duplicate the trip with a new ID. Duplicate all of its stop times
+    # (2) Is there an existing service with the same days as this continuation? If so set the service ID
+    # (3) Create a set of calendar_dates describing this new service
+    # (4) Insert the transfer to the duplicate trip
+    for to_trip in to_trips:
+        cloned_trip_id =  f'{from_trip.trip_id}-blocks2transfers{data.num_duplicated_trips}'
+        cloned_trip = duplicate(data.gtfs.trips, from_trip.trip_id, cloned_trip_id)
+        duplicate(data.gtfs.stop_times, from_trip.trip_id, cloned_trip_id)
+        data.num_duplicated_trips += 1
+        # DANGER DANGER WHAT IF A SPLIT TRIP REFERS TO ANOTHER SPLIT TRIP
+        insert_transfer(data, cloned_trip, to_trip)
+
+    del data.gtfs.trips[from_trip.trip_id]
+    del data.gtfs.stop_times[from_trip.trip_id]
+
+
+def insert_transfer(data, from_trip, to_trip):
+    current_transfers = data.gtfs.transfers.setdefault(from_trip.trip_id, [])
+    current_transfers.append(Transfer(
+        from_trip_id=from_trip.trip_id,
+        to_trip_id=to_trip.trip.trip_id,
+        transfer_type=to_trip.transfer_type
+    ))
 
 
 def pdates(dates):
@@ -183,9 +200,3 @@ def classify_transfer(data, trip, wait_time, cont_trip):
 
     # We presume that the rider will be able to stay onboard the vehicle
     return TransferType.IN_SEAT
-
-
-
-
-
-

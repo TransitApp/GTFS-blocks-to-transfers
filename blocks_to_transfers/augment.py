@@ -8,14 +8,21 @@ from .shape_similarity import LatLon
 DAY_SEC = 86400
 
 
-GTFSAugmented = namedtuple('GTFSAugmented', ('gtfs', 'days_by_service', 'trips_by_block', 'shape_similarity_results'))
+class GTFSAugmented:
+    def __init__(self, gtfs, days_by_service, trips_by_block):
+        self.gtfs = gtfs
+        self.days_by_service = days_by_service
+        self.trips_by_block = trips_by_block
+        self.shape_similarity_results = {}
+        self.num_split_services = 0
+        self.num_duplicated_trips = 0
+
 
 def augment(gtfs):
     return GTFSAugmented(
         gtfs,
         get_days_by_service(gtfs),
         group_trips_by_block(augment_trips(gtfs)),
-        {}
     )
 
 
