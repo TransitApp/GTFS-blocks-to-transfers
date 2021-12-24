@@ -19,23 +19,25 @@ def insert_transfers(data, from_trip, to_trips):
     for to_trip in to_trips:
         cloned_trip_id = f'{from_trip.trip_id}-blocks2transfers#{data.num_duplicated_trips}'
         cloned_trip = duplicate(data.gtfs.trips, from_trip.trip_id, cloned_trip_id)
+        data.gtfs.transfers[cloned_trip_id] = {}
+        data.transfers_in[cloned_trip_id] = {}
+
         duplicate(data.gtfs.stop_times, from_trip.trip_id, cloned_trip_id)
 
-        for out_transfer in data.gtfs.transfers.get(from_trip.trip_id, []):
-            clone_transfer = out_transfer.duplicate()
+        # Existing transfer from this trip, now also come from the cloned trip
+        for to_trip_id, transfer in data.gtfs.transfers.get(from_trip.trip_id, {}).items():
+            clone_transfer = transfer.duplicate()
             clone_transfer.from_trip_id = cloned_trip_id
-            data.gtfs.transfers.setdefault(clone_transfer.from_trip_id, []).append(clone_transfer)
-            data.transfers_in.setdefault(clone_transfer.to_trip_id, []).append(clone_transfer)
+            data.gtfs.transfers[cloned_trip_id][to_trip_id] = clone_transfer
+            data.transfers_in.setdefault(to_trip_id, {})[cloned_trip_id] = clone_transfer
 
         # All incoming transfers to this trip also refer to the clone
-        for in_transfer in data.transfers_in.get(from_trip.trip_id, []):
+        for from_trip_id, transfer in data.transfers_in.get(from_trip.trip_id, {}).items():
             # Create a new transfer object referring to the clone of the trip
-            clone_transfer = in_transfer.duplicate()
+            clone_transfer = transfer.duplicate()
             clone_transfer.to_trip_id = cloned_trip_id
-            data.gtfs.transfers.setdefault(clone_transfer.from_trip_id, []).append(clone_transfer)
-            data.transfers_in.setdefault(clone_transfer.to_trip_id, []).append(clone_transfer)
-
-
+            data.gtfs.transfers[from_trip_id][cloned_trip_id] = clone_transfer
+            data.transfers_in.setdefault(cloned_trip_id, {})[from_trip_id] = clone_transfer
 
         data.num_duplicated_trips += 1
 
@@ -56,8 +58,8 @@ def insert_transfer(data, from_trip, to_trip):
         transfer_type=to_trip.transfer_type
     )
 
-    data.gtfs.transfers.setdefault(from_trip.trip_id, []).append(new_transfer)
-    data.transfers_in.setdefault(to_trip.trip.trip_id, []).append(new_transfer)
+    data.gtfs.transfers.setdefault(from_trip.trip_id, {})[to_trip.trip.trip_id] = new_transfer
+    data.transfers_in.setdefault(to_trip.trip.trip_id, {})[from_trip.trip_id] = new_transfer
 
 
 def create_service_from_days(data, days):

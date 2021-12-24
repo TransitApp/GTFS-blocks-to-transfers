@@ -32,12 +32,7 @@ def load(gtfs_dir):
             merge_with_defined_fields(file_schema, header_row)
             entities = {}
             for entity in parse_rows(file_schema, header_row, reader):
-                key = entity[file_schema.id]
-                if file_schema.group_sort_key:
-                    entities.setdefault(key, []).append(entity)
-                else:
-                    entities[key] = entity
-
+               index_entity(file_schema, entities, entity)
             gtfs[file_schema.name] = sorted_entities(file_schema, entities)
 
     return gtfs
@@ -92,10 +87,28 @@ def convert(config, value):
     return config.type(value)
 
 
+def index_entity(file_schema, entities, entity):
+    key = entity[file_schema.id]
+    if not file_schema.group_id:
+        entities[key] = entity
+        return
+
+
+    group_key = entity[file_schema.group_id]
+    if file_schema.inner_dict:
+        entities.setdefault(key, {})[group_key] = entity
+    else:
+        entities.setdefault(key, []).append(entity)
+
+
 def sorted_entities(file_schema, entities):
-    if file_schema.group_sort_key:
-        for group in entities.values():
-            group.sort(key=lambda entity: entity[file_schema.group_sort_key])
+    if file_schema.group_id:
+        if file_schema.inner_dict:
+            for group_key, group in entities.items():
+                entities[group_key] = dict(sorted(group.items(), key=lambda kv: kv[0]))
+        else:
+            for group in entities.values():
+                group.sort(key=lambda entity: entity[file_schema.group_id])
 
     return dict(sorted(entities.items(), key=lambda kv: kv[0]))
 
@@ -125,10 +138,10 @@ def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
 
 
 def flatten_entities(file_schema, entities):
-    if file_schema.group_sort_key:
+    if file_schema.group_id:
         flat_entities = []
         for entity_list in entities.values():
-            flat_entities.extend(entity_list)
+            flat_entities.extend(entity_list.values() if file_schema.inner_dict else entity_list)
         return flat_entities
     else:
         return entities.values()

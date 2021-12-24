@@ -131,10 +131,10 @@ def get_transfers_in(transfers):
         if not from_trip_id:
             continue
 
-        for trip_transfer in trip_transfers:
-            if not trip_transfer.to_trip_id:
+        for to_trip_id, transfer in trip_transfers:
+            if not to_trip_id:
                 continue
 
-            transfers_in.setdefault(trip_transfer.to_trip_id, []).append(trip_transfer)
+            transfers_in.setdefault(to_trip_id, {})[from_trip_id] = transfer
 
     return transfers_in

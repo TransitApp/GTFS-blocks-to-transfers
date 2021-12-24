@@ -33,7 +33,7 @@ class Calendar(Entity):
 
 
 class CalendarDate(Entity):
-    SCHEMA = File(id='service_id', name='calendar_dates', group_sort_key='date', required=False)
+    SCHEMA = File(id='service_id', name='calendar_dates', group_id='date', required=False)
 
     service_id: str
     date: GTFSDate
@@ -52,7 +52,7 @@ class Trip(Entity):
 
 # Currently not parsed for performance reasons
 class Shape(Entity):
-    SCHEMA = File(id='shape_id', name='shapes', required=False, group_sort_key='shape_pt_sequence')
+    SCHEMA = File(id='shape_id', name='shapes', required=False, group_id='shape_pt_sequence')
 
     shape_id: str
     shape_pt_sequence: int
@@ -68,7 +68,7 @@ class Stop(Entity):
     stop_lon: float
 
 class Transfer(Entity):
-    SCHEMA = File(id='from_trip_id', name='transfers', required=False, group_sort_key='to_trip_id')
+    SCHEMA = File(id='from_trip_id', name='transfers', required=False, group_id='to_trip_id', inner_dict=True)
 
     from_trip_id: str = ''
     to_trip_id: str = ''
@@ -76,7 +76,7 @@ class Transfer(Entity):
 
 
 class StopTime(Entity):
-    SCHEMA = File(id='trip_id', name='stop_times', required=True, group_sort_key='stop_sequence')
+    SCHEMA = File(id='trip_id', name='stop_times', required=True, group_id='stop_sequence')
 
     trip_id: str
     stop_id: str

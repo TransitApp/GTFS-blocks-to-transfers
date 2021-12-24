@@ -3,7 +3,7 @@ Field = namedtuple('Field', ('type', 'required', 'default'))
 
 
 class File:
-    def __init__(self, id, name, filename=None, required=True, group_sort_key=None):
+    def __init__(self, id, name, filename=None, required=True, group_id=None, inner_dict=False):
         # Primary key for this file, serves as the key of the generated dict
         self.id = id
 
@@ -17,9 +17,12 @@ class File:
         # If this file is absent from the GTFS directory, should process abort?
         self.required = required
 
-        # If set, multiple entities may share the same ID. The group sort key is used to provide
-        # a deterministic order among entities with a common ID
-        self.group_sort_key = group_sort_key
+        # If set, multiple entities may share the same ID. The group key is used to provide a deterministic order among
+        # such entities
+        self.group_id = group_id
+
+        # If true, then the group key should be a dictionary key at the second level
+        self.inner_dict = inner_dict
 
         # Will be set to point to the class defining this file
         self.class_def = None
