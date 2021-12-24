@@ -67,6 +67,13 @@ class Stop(Entity):
     stop_lat: float
     stop_lon: float
 
+class Transfer(Entity):
+    SCHEMA = File(id='from_trip_id', name='transfers', required=False, group_sort_key='to_trip_id')
+
+    from_trip_id: str = ''
+    to_trip_id: str = ''
+    transfer_type: TransferType = TransferType.RECOMMENDED
+
 
 class StopTime(Entity):
     SCHEMA = File(id='trip_id', name='stop_times', required=True, group_sort_key='stop_sequence')
@@ -78,12 +85,4 @@ class StopTime(Entity):
     departure_time: GTFSTime = GTFSTime('')
 
 
-class Transfer(Entity):
-    SCHEMA = File(id='from_trip_id', name='transfers', required=False, group_sort_key='to_trip_id')
-
-    from_trip_id: str = ''
-    to_trip_id: str = ''
-    transfer_type: TransferType = TransferType.RECOMMENDED
-
-
-GTFS_SUBSET_SCHEMA = Schema(Calendar, CalendarDate, Trip, Stop, StopTime, Transfer)
+GTFS_SUBSET_SCHEMA = Schema(Calendar, CalendarDate, Trip, Stop, Transfer, StopTime)

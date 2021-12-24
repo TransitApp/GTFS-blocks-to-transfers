@@ -109,6 +109,7 @@ def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
         shutil.copy2(original_filename, gtfs_out_dir / original_filename.name)
 
     for file_schema in GTFS_SUBSET_SCHEMA.values():
+        print(f'Exporting {file_schema.name}')
         entities = gtfs.get(file_schema.name)
         if not entities:
             continue
@@ -123,23 +124,27 @@ def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
                 writer.writerow(serialize_field(entity[name]) for name in fields)
 
 
-
 def flatten_entities(file_schema, entities):
     if file_schema.group_sort_key:
-        return sum(entities.values(), [])
+        flat_entities = []
+        for entity_list in entities.values():
+            flat_entities.extend(entity_list)
+        return flat_entities
     else:
         return entities.values()
 
 
 def serialize_field(value):
-    try:
-        # bools and enums have both a string-like representation and an integer-like one. GTFS always uses the latter.
-        return str(int(value))
-    except (TypeError, ValueError):
-        return str(value)
+    if isinstance(value, (bool, enum.IntEnum)):
+        return str(int(value)) # Use the numerical representation of this type in final output
+
+    return str(value) # Direct conversion to string
 
 
 def duplicate(entities, key, new_key):
+    if key not in entities:
+        return
+
     entries = entities[key]
     if isinstance(entries, list):
         entities[new_key] = [duplicate_1(entity, new_key) for entity in entries]

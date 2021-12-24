@@ -1,7 +1,7 @@
 from collections import namedtuple
 from datetime import timedelta
 from enum import Enum
-from . import config, shape_similarity
+from . import config, shape_similarity, insert_transfers
 from .augment import DAY_SEC
 from .editor import duplicate
 from .editor.schema import TransferType, Transfer
@@ -10,9 +10,8 @@ from .editor.schema import TransferType, Transfer
 TODO: 
 1. test cases
 3. readme
-5. midnight shift
-7. lookup existing services or make a new fake
-8. dupe trip
+5. correctly apply midnight shift to both original trips and next day continuations
+9. check if dupe trip -> dupe trip works correctly re:transfers
 """
 
 
@@ -57,42 +56,8 @@ def convert_block(data, trips):
         # of service, but we do not need to explicitly store this, as the trip-to-trip transfers we do write will be
         # ignored unless both trips are operating
 
-        insert_transfers(data, trip, trip_transfers)
+        insert_transfers.insert_transfers(data, trip, trip_transfers)
 
-
-def insert_transfers(data, from_trip, to_trips):
-    if not to_trips:
-        return
-
-    if len(to_trips) == 1:
-        insert_transfer(data, from_trip, to_trips[0])
-        return
-
-    # There are 2+ continuations, depending on the day of service.
-    # For each transfer:
-    # (1) Duplicate the trip with a new ID. Duplicate all of its stop times
-    # (2) Is there an existing service with the same days as this continuation? If so set the service ID
-    # (3) Create a set of calendar_dates describing this new service
-    # (4) Insert the transfer to the duplicate trip
-    for to_trip in to_trips:
-        cloned_trip_id =  f'{from_trip.trip_id}-blocks2transfers{data.num_duplicated_trips}'
-        cloned_trip = duplicate(data.gtfs.trips, from_trip.trip_id, cloned_trip_id)
-        duplicate(data.gtfs.stop_times, from_trip.trip_id, cloned_trip_id)
-        data.num_duplicated_trips += 1
-        # DANGER DANGER WHAT IF A SPLIT TRIP REFERS TO ANOTHER SPLIT TRIP
-        insert_transfer(data, cloned_trip, to_trip)
-
-    del data.gtfs.trips[from_trip.trip_id]
-    del data.gtfs.stop_times[from_trip.trip_id]
-
-
-def insert_transfer(data, from_trip, to_trip):
-    current_transfers = data.gtfs.transfers.setdefault(from_trip.trip_id, [])
-    current_transfers.append(Transfer(
-        from_trip_id=from_trip.trip_id,
-        to_trip_id=to_trip.trip.trip_id,
-        transfer_type=to_trip.transfer_type
-    ))
 
 
 def pdates(dates):
@@ -144,7 +109,7 @@ def consider_transfer(data, days_to_match, trip, cont_trip, after_midnight=False
         return None
 
     transfer_type = classify_transfer(data, trip, wait_time, cont_trip)
-    return TransferResult(transfer_type, cont_trip, days_when_best)
+    return TransferResult(transfer_type, cont_trip, frozenset(days_when_best))
 
 
 def match_transfer(data, days_to_match, trip, wait_time, cont_trip):

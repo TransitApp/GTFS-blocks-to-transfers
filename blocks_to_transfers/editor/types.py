@@ -31,6 +31,9 @@ class GTFSDate(datetime):
             return super().__new__(cls, *args, **kwargs)
 
         iso_str = args[0]
+        if isinstance(iso_str, datetime):
+            return super().__new__(cls, year=iso_str.year, month=iso_str.month, day=iso_str.day)
+
         if not iso_str:
             raise ValueError('Invalid date: empty')
         try:
@@ -39,7 +42,7 @@ class GTFSDate(datetime):
             return cls.strptime(iso_str, '%Y%m%d')
 
     def __repr__(self):
-        return self.strftime('%Y-%m-%d')
+        return self.strftime('%Y%m%d')
 
     def __str__(self):
         return repr(self)

@@ -8,6 +8,7 @@ def process(in_dir, out_dir):
     convert.convert_blocks(data)
 
     editor.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir)
+    print('Done.')
 
 
 def main():
