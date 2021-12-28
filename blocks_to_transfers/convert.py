@@ -39,15 +39,12 @@ def convert_block(data, trips):
                 if transfer_opt:
                     trip_transfers.append(transfer_opt)
 
-            # The transfer may be after midnight
-
+            # Trips are normalized to always start in [0,24)h, so potential continuation trips after midnight
+            # always occur _before_ the current trip in the block ordering
             for cont_trip in trips[:i_trip]:
-                transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip,
-                                                        after_midnight=True)
+                transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip, after_midnight=True)
                 if transfer_opt:
                     trip_transfers.append(transfer_opt)
-
-
         except StopIteration:
             # Will be raised once we know that there's no further trips to consider for transfers
             pass
