@@ -31,8 +31,9 @@ def load(gtfs_dir):
 
             merge_with_defined_fields(file_schema, header_row)
             entities = {}
-            for entity in parse_rows(file_schema, header_row, reader):
+            for entity in parse_rows(gtfs, file_schema, header_row, reader):
                index_entity(file_schema, entities, entity)
+                
             gtfs[file_schema.name] = sorted_entities(file_schema, entities)
 
     return gtfs
@@ -51,10 +52,11 @@ def merge_with_defined_fields(file_schema, header_row):
             file_schema.class_def.__annotations__[name] = str
 
 
-def parse_rows(file_schema, header_row, reader):
+def parse_rows(gtfs, file_schema, header_row, reader):
     fields = file_schema.get_fields()
     for lineno, row in enumerate(reader, 2):
         entity = file_schema.class_def()
+        entity._gtfs = gtfs
 
         for name, value in zip(header_row, row):
             config = fields[name]
@@ -62,7 +64,7 @@ def parse_rows(file_schema, header_row, reader):
                 raise ValueError(f'{file_schema.filename}:{lineno}: required field {name} is empty')
 
             entity[name] = validate(config, value,
-                context_fn=lambda: f'{file_schema}:{lineno} field {name} = {repr(value)}')
+                                    context_fn=lambda: f'{file_schema}:{lineno} field {name} = {repr(value)}')
 
         yield entity
 
@@ -73,6 +75,7 @@ def validate(config, value, context_fn):
     except Exception as exc:
 
         raise ValueError(f'{context_fn()}: {exc.args[0]}')
+
 
 def convert(config, value):
     if issubclass(config.type, enum.IntEnum):
@@ -92,7 +95,6 @@ def index_entity(file_schema, entities, entity):
     if not file_schema.group_id:
         entities[key] = entity
         return
-
 
     group_key = entity[file_schema.group_id]
     if file_schema.inner_dict:
@@ -168,7 +170,7 @@ def duplicate(entities, key, new_key):
 
 
 def duplicate_1(entity, new_key):
-    field_schema = entity.__class__.SCHEMA
+    field_schema = entity.__class__._schema
     new_entity = entity.duplicate()
     new_entity[field_schema.id] = new_key
     return new_entity

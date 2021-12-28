@@ -1,9 +1,7 @@
 from collections import namedtuple
 from datetime import timedelta
-from enum import Enum
 from . import config, shape_similarity, insert_transfers
 from .augment import DAY_SEC
-from .editor import duplicate
 from .editor.schema import TransferType, Transfer
 
 """
@@ -67,10 +65,10 @@ def pdates(dates):
 
 def get_days(days_by_service, trip):
     service_days = days_by_service[trip.service_id]
-    if trip.one_day_forward_of_service:
+    if trip.shifted_to_next_day:
         return {day + timedelta(days=1) for day in service_days}
     else:
-        return set(service_days) # Need a copy to modify
+        return set(service_days)  # Need a copy to modify
 
 
 class InvalidBlockError(ValueError):
@@ -144,12 +142,12 @@ def classify_transfer(data, trip, wait_time, cont_trip):
         return TransferType.VEHICLE_CONTINUATION
 
     # cont_trip resumes too far away from where trip ended (probably involves deadheading)
-    if trip.last_stop.dist_to(cont_trip.first_stop) > config.InSeatTransfers.same_location_distance:
+    if trip.last_point.dist_to(cont_trip.first_point) > config.InSeatTransfers.same_location_distance:
         return TransferType.VEHICLE_CONTINUATION
 
     # trip and cont_trip form a loop, therefore any similarity in shape is not an issue for riders
-    if (trip.first_stop.dist_to(cont_trip.first_stop) < config.InSeatTransfers.same_location_distance
-        and trip.last_stop.dist_to(cont_trip.last_stop) < config.InSeatTransfers.same_location_distance):
+    if (trip.first_point.dist_to(cont_trip.first_point) < config.InSeatTransfers.same_location_distance
+        and trip.last_point.dist_to(cont_trip.last_point) < config.InSeatTransfers.same_location_distance):
         return TransferType.IN_SEAT
 
     if config.InSeatTransfers.ignore_return_via_same_route:
@@ -157,7 +155,7 @@ def classify_transfer(data, trip, wait_time, cont_trip):
             return TransferType.VEHICLE_CONTINUATION
 
     if config.InSeatTransfers.ignore_return_via_similar_trip:
-        if shape_similarity.trip_shapes_similar(data.shape_similarity_results, trip.shape, cont_trip.shape):
+        if shape_similarity.trip_shapes_similar(data.shape_similarity_results, trip.shape_ref, cont_trip.shape_ref):
             return TransferType.VEHICLE_CONTINUATION
 
     # We presume that the rider will be able to stay onboard the vehicle

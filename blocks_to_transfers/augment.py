@@ -1,12 +1,7 @@
-from collections import namedtuple
 from datetime import timedelta
 
 from . import config
 from .editor.schema import *
-from .shape_similarity import LatLon
-
-DAY_SEC = 86400
-
 
 class GTFSAugmented:
     def __init__(self, gtfs, days_by_service, service_by_days, trips_by_block, transfers_in):
@@ -72,49 +67,18 @@ def augment_trips(gtfs):
             print(f'Warning: Trip {trip.trip_id} deleted as it has fewer than two stops.')
             continue
 
-        set_span(gtfs, trip)
         if config.InSeatTransfers.ignore_return_via_similar_trip:
-            set_shape(unique_shapes, gtfs, trip)
+            trip.shape_ref = unique_shapes.setdefault(trip.stop_shape, trip.stop_shape)
         trips.append(trip)
 
     trips.sort(key=lambda trip: trip.first_departure)
     return trips
 
 
-def set_span(gtfs, trip):
-    first_st = gtfs.stop_times[trip.trip_id][0]
-    last_st = gtfs.stop_times[trip.trip_id][-1]
-    day_shift = 0 if first_st.departure_time < DAY_SEC else DAY_SEC
-
-    trip.first_departure = first_st.departure_time - day_shift
-    trip.last_arrival = last_st.arrival_time - day_shift
-    trip.one_day_forward_of_service = day_shift != 0
-
-    first_stop = gtfs.stops[first_st.stop_id]
-    trip.first_stop = LatLon(first_stop.stop_lat, first_stop.stop_lon)
-    last_stop = gtfs.stops[last_st.stop_id]
-    trip.last_stop = LatLon(last_stop.stop_lat, last_stop.stop_lon)
-
-
-def set_shape(unique_shapes, gtfs, trip):
-    """
-    A trip's shape can be used to predict whether or not the continuation is an in-seat transfer. For performance reasons,
-    we always use the trip's sequence of stops, even if a GTFS shape is provided for the trip,.
-    """
-
-    stop_shape = []
-    for stop_time in gtfs.stop_times[trip.trip_id]:
-        stop = gtfs.stops[stop_time.stop_id]
-        stop_shape.append(LatLon(stop.stop_lat, stop.stop_lon))
-
-    stop_shape = tuple(stop_shape)
-    trip.shape = unique_shapes.setdefault(stop_shape, stop_shape)
-
-
-def group_trips_by_block(trip_spans):
+def group_trips_by_block(trips):
     trips_by_block = {}
 
-    for trip in trip_spans:
+    for trip in trips:
         if not trip.block_id:
             continue
 
@@ -131,7 +95,7 @@ def get_transfers_in(transfers):
         if not from_trip_id:
             continue
 
-        for to_trip_id, transfer in trip_transfers:
+        for to_trip_id, transfer in trip_transfers.items():
             if not to_trip_id:
                 continue
 

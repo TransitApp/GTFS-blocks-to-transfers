@@ -11,6 +11,9 @@ class GTFSTime(int):
 
         h, m, s = time_str.split(':')
 
+        if int(h) > 47:
+            raise ValueError(f'Time {time_str} is delayed from the service day by more than one day')
+
         return super().__new__(cls, 3600*int(h) + 60*int(m) + int(s))
 
     def __str__(self):
@@ -50,6 +53,8 @@ class GTFSDate(datetime):
 
 class Entity:
     def __init__(self, **kwargs):
+        self._gtfs = None
+        self._saved_properties = {}
         default_init = {k: v for k, v in self.__class__.__dict__.items() if Entity._is_field(k, v)}
         self.__dict__.update(default_init)
         self.__dict__.update(kwargs)
@@ -59,10 +64,7 @@ class Entity:
         if callable(v):
             return False
 
-        if k.startswith('_'):
-            return False
-
-        return k not in {'SCHEMA', 'data'}
+        return not k.startswith('_')
 
     def __getitem__(self, item):
         return self.__dict__[item]
@@ -90,3 +92,13 @@ class Entity:
 
     def duplicate(self):
         return self.__class__(**self.__dict__)
+
+
+def saved_property(compute_fn):
+    def get_fn(self):
+        if compute_fn.__name__ not in self._saved_properties:
+            self._saved_properties[compute_fn.__name__] = compute_fn(self)
+
+        return self._saved_properties[compute_fn.__name__]
+
+    return property(get_fn)

@@ -36,8 +36,8 @@ class Schema:
     def __init__(self, *args):
         self.entities = {}
         for file in args:
-            file.SCHEMA.class_def = file
-            self.entities[file.SCHEMA.filename] = file.SCHEMA
+            file._schema.class_def = file
+            self.entities[file._schema.filename] = file._schema
 
     def keys(self):
         return self.entities.keys()
