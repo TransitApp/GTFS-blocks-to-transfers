@@ -1,0 +1,5 @@
+service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+mon-tues-wed-thurs-fri-sat-sun,1,1,1,1,1,1,1,20210101,20211231
+fri-sat-sun,0,0,0,0,1,1,1,20210101,20211231
+fri-sat,0,0,0,0,1,1,0,20210101,20211231
+mon-tues-wed-thurs,1,1,1,1,0,0,0,20210101,20211231

@@ -52,6 +52,9 @@ def insert_transfers(data, from_trip, to_trips):
 
 
 def insert_transfer(data, from_trip, to_trip):
+    if to_trip.transfer_type is TransferType.NOT_POSSIBLE:
+        return
+
     new_transfer = Transfer(
         from_trip_id=from_trip.trip_id,
         to_trip_id=to_trip.trip.trip_id,

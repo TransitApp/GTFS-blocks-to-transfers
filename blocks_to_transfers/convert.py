@@ -53,6 +53,13 @@ def convert_block(data, trips):
         # of service, but we do not need to explicitly store this, as the trip-to-trip transfers we do write will be
         # ignored unless both trips are operating
 
+        # !!!! FIXME: days when best is shifted for calculation reasons - we have to shift it back before searching for
+        # or generating services
+
+        if days_to_match:
+            # TODO: insert the unneeded variant as it helps with debugging
+            trip_transfers.append(TransferResult(TransferType.NOT_POSSIBLE, None, frozenset(days_to_match)))
+
         insert_transfers.insert_transfers(data, trip, trip_transfers)
 
 
