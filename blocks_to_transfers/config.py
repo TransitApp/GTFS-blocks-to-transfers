@@ -13,6 +13,7 @@ class TripToTripTransfers:
 # Controls whether an identified continuation is marked as an in-seat transfer, where riders are permitted to stay
 # onboard.
 
+
 class InSeatTransfers:
     # Maximum wait time for riders aboard the vehicle. May be 0 if this agency never allows in-seat transfers.
     max_wait_time = 600  # seconds

@@ -8,7 +8,6 @@ from .editor.schema import TransferType, Transfer
 TODO: 
 1. test cases
 3. readme
-5. correctly apply midnight shift to both original trips and next day continuations
 9. check if dupe trip -> dupe trip works correctly re:transfers
 """
 
@@ -29,7 +28,7 @@ def convert_block(data, trips):
             continue
 
         trip_transfers = []
-        days_to_match = get_days(data.days_by_service, trip)
+        days_to_match = get_actual_days_of_service(data.days_by_service, trip)
 
         try:
             for cont_trip in trips[i_trip + 1:]:
@@ -37,12 +36,15 @@ def convert_block(data, trips):
                 if transfer_opt:
                     trip_transfers.append(transfer_opt)
 
-            # Trips are normalized to always start in [0,24)h, so potential continuation trips after midnight
-            # always occur _before_ the current trip in the block ordering
+            # Search continues onto the next service day, starting from the 0th-trip (earliest). Trips are already
+            # normalized to always start between [0,24h). Shift the remaining days to match one day forward
+            days_to_match = {day + timedelta(days=1) for day in days_to_match}
+
             for cont_trip in trips[:i_trip]:
-                transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip, after_midnight=True)
+                transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip, next_day=True)
                 if transfer_opt:
                     trip_transfers.append(transfer_opt)
+
         except StopIteration:
             # Will be raised once we know that there's no further trips to consider for transfers
             pass
@@ -63,7 +65,7 @@ def pdates(dates):
     return tdates
 
 
-def get_days(days_by_service, trip):
+def get_actual_days_of_service(days_by_service, trip):
     service_days = days_by_service[trip.service_id]
     if trip.shifted_to_next_day:
         return {day + timedelta(days=1) for day in service_days}
@@ -92,10 +94,10 @@ class InvalidBlockError(ValueError):
 TransferResult = namedtuple('TransferResult', ('transfer_type', 'trip', 'days_when_best'))
 
 
-def consider_transfer(data, days_to_match, trip, cont_trip, after_midnight=False):
+def consider_transfer(data, days_to_match, trip, cont_trip, next_day=False):
     wait_time = cont_trip.first_departure - trip.last_arrival
 
-    if after_midnight:
+    if next_day:
         wait_time += DAY_SEC
 
     # First check if cont_trip is a valid trip-to-trip transfer
@@ -116,7 +118,7 @@ def match_transfer(data, days_to_match, trip, wait_time, cont_trip):
     if wait_time > config.TripToTripTransfers.max_wait_time:
         raise StopIteration
 
-    days_when_best = get_days(data.days_by_service, cont_trip)
+    days_when_best = get_actual_days_of_service(data.days_by_service, cont_trip)
     days_when_best.intersection_update(days_to_match)
 
     # A: trip and cont_trip never run on the same day; or
