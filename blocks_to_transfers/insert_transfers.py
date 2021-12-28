@@ -61,6 +61,7 @@ def insert_transfer(data, from_trip, to_trip):
         transfer_type=to_trip.transfer_type
     )
 
+    print('create', from_trip.trip_id, to_trip.trip.trip_id)
     data.gtfs.transfers.setdefault(from_trip.trip_id, {})[to_trip.trip.trip_id] = new_transfer
     data.transfers_in.setdefault(to_trip.trip.trip_id, {})[from_trip.trip_id] = new_transfer
 
@@ -83,6 +84,12 @@ def delete_trip(data, trip_id):
     del data.gtfs.stop_times[trip_id]
     if trip_id in data.gtfs.transfers:
         del data.gtfs.transfers[trip_id]
+
+    if trip_id in data.transfers_in:
+        for dest_trip in data.transfers_in[trip_id]:
+            print('destroy', dest_trip, trip_id)
+            del data.gtfs.transfers[dest_trip][trip_id]
+
         del data.transfers_in[trip_id]
 
 

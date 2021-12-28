@@ -28,20 +28,21 @@ def convert_block(data, trips):
             continue
 
         trip_transfers = []
-        days_to_match = get_actual_days_of_service(data.days_by_service, trip)
+        days_to_match = set(data.days_by_service[trip.service_id])
+        shift_days = 1 if trip.shifted_to_next_day else 0
 
         try:
             for cont_trip in trips[i_trip + 1:]:
-                transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip)
+                transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip, shift_days)
                 if transfer_opt:
                     trip_transfers.append(transfer_opt)
 
-            # Search continues onto the next service day, starting from the 0th-trip (earliest). Trips are already
-            # normalized to always start between [0,24h). Shift the remaining days to match one day forward
-            days_to_match = {day + timedelta(days=1) for day in days_to_match}
+            # Search continues onto the next day; shift days of service from continuation trips back one day to match
+            # the notation used to describe trip
+            shift_days += 1
 
             for cont_trip in trips[:i_trip]:
-                transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip, next_day=True)
+                transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip, shift_days)
                 if transfer_opt:
                     trip_transfers.append(transfer_opt)
 
@@ -52,9 +53,6 @@ def convert_block(data, trips):
         # If days_to_match is not empty, it results in an additional case where trip has no continuation on certain days
         # of service, but we do not need to explicitly store this, as the trip-to-trip transfers we do write will be
         # ignored unless both trips are operating
-
-        # !!!! FIXME: days when best is shifted for calculation reasons - we have to shift it back before searching for
-        # or generating services
 
         if days_to_match:
             # TODO: insert the unneeded variant as it helps with debugging
@@ -72,12 +70,7 @@ def pdates(dates):
     return tdates
 
 
-def get_actual_days_of_service(days_by_service, trip):
-    service_days = days_by_service[trip.service_id]
-    if trip.shifted_to_next_day:
-        return {day + timedelta(days=1) for day in service_days}
-    else:
-        return set(service_days)  # Need a copy to modify
+
 
 
 class InvalidBlockError(ValueError):
@@ -101,14 +94,16 @@ class InvalidBlockError(ValueError):
 TransferResult = namedtuple('TransferResult', ('transfer_type', 'trip', 'days_when_best'))
 
 
-def consider_transfer(data, days_to_match, trip, cont_trip, next_day=False):
+def consider_transfer(data, days_to_match, trip, cont_trip, shift_days):
     wait_time = cont_trip.first_departure - trip.last_arrival
 
-    if next_day:
+    if shift_days > 0:
+        # Due to normalization of first departure time, the maximum shift needed is 24h to put the continuation trip
+        # onto the previous service day
         wait_time += DAY_SEC
 
     # First check if cont_trip is a valid trip-to-trip transfer
-    days_when_best = match_transfer(data, days_to_match, trip, wait_time, cont_trip)
+    days_when_best = match_transfer(data, days_to_match, trip, wait_time, cont_trip, shift_days)
     if not days_when_best:
         return None
 
@@ -116,7 +111,7 @@ def consider_transfer(data, days_to_match, trip, cont_trip, next_day=False):
     return TransferResult(transfer_type, cont_trip, frozenset(days_when_best))
 
 
-def match_transfer(data, days_to_match, trip, wait_time, cont_trip):
+def match_transfer(data, days_to_match, trip, wait_time, cont_trip, shift_days):
     # transfer found for every day trip operates on
     if not days_to_match:
         raise StopIteration
@@ -125,7 +120,7 @@ def match_transfer(data, days_to_match, trip, wait_time, cont_trip):
     if wait_time > config.TripToTripTransfers.max_wait_time:
         raise StopIteration
 
-    days_when_best = get_actual_days_of_service(data.days_by_service, cont_trip)
+    days_when_best = get_shifted_days_of_service(data.days_by_service, cont_trip, shift_days)
     days_when_best.intersection_update(days_to_match)
 
     # A: trip and cont_trip never run on the same day; or
@@ -143,6 +138,15 @@ def match_transfer(data, days_to_match, trip, wait_time, cont_trip):
 
     days_to_match.difference_update(days_when_best)
     return days_when_best
+
+
+def get_shifted_days_of_service(days_by_service, trip, shift_days):
+    if trip.shifted_to_next_day:
+        shift_days -= 1
+
+    # FIXME: Can this spuriously add extra days at the beginning of the service that were never intended?
+
+    return {day + timedelta(days=shift_days) for day in days_by_service[trip.service_id]}
 
 
 def classify_transfer(data, trip, wait_time, cont_trip):
