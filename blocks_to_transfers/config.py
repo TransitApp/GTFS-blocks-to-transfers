@@ -10,12 +10,11 @@ class TripToTripTransfers:
     # If true, existing trip-to-trip transfers will be overwritten with predicted continuations from the algorithm
     overwrite_existing = False
 
+
 # Controls whether an identified continuation is marked as an in-seat transfer, where riders are permitted to stay
 # onboard.
-
-
 class InSeatTransfers:
-    # Maximum wait time for riders aboard the vehicle. May be 0 if this agency never allows in-seat transfers.
+    # Maximum wait time for riders aboard the vehicle. May be -1 if this agency never allows in-seat transfers.
     max_wait_time = 600  # seconds
 
     # Used to determine whether two stops are sufficiently close to be considered 'at the same location', needed for

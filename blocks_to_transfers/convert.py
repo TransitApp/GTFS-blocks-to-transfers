@@ -2,7 +2,7 @@ from collections import namedtuple
 from datetime import timedelta
 from . import config, shape_similarity, insert_transfers
 from .augment import DAY_SEC
-from .editor.schema import TransferType, Transfer
+from .editor.schema import TransferType
 
 """
 TODO: 
@@ -68,8 +68,6 @@ def pdates(dates):
     if len(dates) > 14:
         tdates += ' ...'
     return tdates
-
-
 
 
 
