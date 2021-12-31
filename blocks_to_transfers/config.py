@@ -10,6 +10,10 @@ class TripToTripTransfers:
     # If true, existing trip-to-trip transfers will be overwritten with predicted continuations from the algorithm
     overwrite_existing = False
 
+    # If true, trip-to-trip transfers will be normalized such that for all of the days from_trip_id operates on, all of
+    # the to_trip_ids are also in operation
+    invariant_transfers = True
+
 
 # Controls whether an identified continuation is marked as an in-seat transfer, where riders are permitted to stay
 # onboard.

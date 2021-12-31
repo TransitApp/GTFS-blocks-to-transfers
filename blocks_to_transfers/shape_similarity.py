@@ -1,3 +1,7 @@
+"""
+Implements similarity metrics based on trip shapes, used by convert to predict whether or not a continuation represents
+and in-seat transfer.
+"""
 from . import config
 from math import *
 
@@ -18,6 +22,7 @@ def trip_shapes_similar(similarity_results, shape_a, shape_b):
 def compute_shapes_similar(shape_a, shape_b):
     return hausdorff_percentile(shape_a, shape_b,
                                 threshold=config.InSeatTransfers.similarity_percentile) < config.InSeatTransfers.similarity_distance
+
 
 def hausdorff_percentile(shape_a, shape_b, threshold):
     dists = dist_point_to_nearest_segment(shape_points=shape_a, shape_segments=shape_b)

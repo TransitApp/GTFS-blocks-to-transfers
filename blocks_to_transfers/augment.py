@@ -1,28 +1,28 @@
+"""
+Computes data structures that make converting blocks to transfers more efficient.
+"""
+
 from datetime import timedelta
 
 from . import config
 from .editor.schema import *
 
+
 class GTFSAugmented:
-    def __init__(self, gtfs, days_by_service, service_by_days, trips_by_block, transfers_in):
+    def __init__(self, gtfs, days_by_service, trips_by_block):
         self.gtfs = gtfs
         self.days_by_service = days_by_service
-        self.service_by_days = service_by_days
         self.trips_by_block = trips_by_block
-        self.transfers_in = transfers_in
         self.shape_similarity_results = {}
-        self.num_split_services = 0
-        self.num_duplicated_trips = 0
+
+# ,
 
 
 def augment(gtfs):
-    days_by_service = get_days_by_service(gtfs)
     return GTFSAugmented(
         gtfs,
-        days_by_service,
-        {frozenset(days): service_id for service_id, days in days_by_service.items()},
+        get_days_by_service(gtfs),
         group_trips_by_block(augment_trips(gtfs)),
-        get_transfers_in(gtfs.transfers)
     )
 
 
@@ -59,7 +59,7 @@ def get_days_by_service(gtfs):
 
 
 def augment_trips(gtfs):
-    print('Calculating trip timespans and stop shapes')
+    print('Merging shapes of identical trip stop sequences')
     unique_shapes = {}
     trips = []
     for trip in list(gtfs.trips.values()):
@@ -85,20 +85,3 @@ def group_trips_by_block(trips):
         trips_by_block.setdefault(trip.block_id, []).append(trip)
 
     return trips_by_block
-
-
-def get_transfers_in(transfers):
-    print('Computing transfer in-edges')
-    transfers_in = {}
-
-    for from_trip_id, trip_transfers in transfers.items():
-        if not from_trip_id:
-            continue
-
-        for to_trip_id, transfer in trip_transfers.items():
-            if not to_trip_id:
-                continue
-
-            transfers_in.setdefault(to_trip_id, {})[from_trip_id] = transfer
-
-    return transfers_in

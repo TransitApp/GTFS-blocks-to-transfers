@@ -69,7 +69,7 @@ class Trip(Entity):
 
     @saved_property
     def shifted_to_next_day(self):
-        return self.first_stop_time.departure_time > DAY_SEC
+        return self.first_stop_time.departure_time >= DAY_SEC
 
     @saved_property
     def first_departure(self):
@@ -77,7 +77,7 @@ class Trip(Entity):
 
     @saved_property
     def last_arrival(self):
-        return self.last_stop_time.arrival_time - DAY_SEC * self.shifted_to_next_day
+        return self.last_stop_time.arrival_time - DAY_SEC*self.shifted_to_next_day
 
     @saved_property
     def first_point(self):

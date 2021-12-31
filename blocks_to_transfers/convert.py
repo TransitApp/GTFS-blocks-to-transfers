@@ -1,8 +1,10 @@
-from collections import namedtuple
+"""
+For every trip within a block, identifies valid continuation trips. Predicts whether each continuation is likely to be
+an in-seat transfer, or simply a vehicle continuation for operational purposes.
+"""
 from datetime import timedelta
-from . import config, shape_similarity, insert_transfers
-from .augment import DAY_SEC
-from .editor.schema import TransferType
+from . import config, shape_similarity
+from .editor.schema import TransferType, Transfer, DAY_SEC
 
 """
 TODO: 
@@ -14,20 +16,23 @@ TODO:
 
 def convert_blocks(data):
     print('Predicting continuations')
+    converted_transfers = []
 
     for trips in data.trips_by_block.values():
         try:
-            convert_block(data, trips)
+            converted_transfers.extend(convert_block(data, trips))
         except InvalidBlockError as exc:
             print(str(exc))
+            
+    return converted_transfers
 
 
 def convert_block(data, trips):
+    converted_transfers = []
     for i_trip, trip in enumerate(trips):
         if not config.TripToTripTransfers.overwrite_existing and trip in data.gtfs.transfers:
             continue
 
-        trip_transfers = []
         days_to_match = set(data.days_by_service[trip.service_id])
         shift_days = 1 if trip.shifted_to_next_day else 0
 
@@ -35,7 +40,7 @@ def convert_block(data, trips):
             for cont_trip in trips[i_trip + 1:]:
                 transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip, shift_days)
                 if transfer_opt:
-                    trip_transfers.append(transfer_opt)
+                    converted_transfers.append(transfer_opt)
 
             # Search continues onto the next day; shift days of service from continuation trips back one day to match
             # the notation used to describe trip
@@ -44,7 +49,7 @@ def convert_block(data, trips):
             for cont_trip in trips[:i_trip]:
                 transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip, shift_days)
                 if transfer_opt:
-                    trip_transfers.append(transfer_opt)
+                    converted_transfers.append(transfer_opt)
 
         except StopIteration:
             # Will be raised once we know that there's no further trips to consider for transfers
@@ -52,14 +57,9 @@ def convert_block(data, trips):
 
         # If days_to_match is not empty, it results in an additional case where trip has no continuation on certain days
         # of service, but we do not need to explicitly store this, as the trip-to-trip transfers we do write will be
-        # ignored unless both trips are operating
+        # ignored unless both trips are operating.
 
-        if days_to_match:
-            # TODO: insert the unneeded variant as it helps with debugging
-            trip_transfers.append(TransferResult(TransferType.NOT_POSSIBLE, None, frozenset(days_to_match)))
-
-        insert_transfers.insert_transfers(data, trip, trip_transfers)
-
+    return converted_transfers
 
 
 def pdates(dates):
@@ -68,7 +68,6 @@ def pdates(dates):
     if len(dates) > 14:
         tdates += ' ...'
     return tdates
-
 
 
 class InvalidBlockError(ValueError):
@@ -89,9 +88,6 @@ class InvalidBlockError(ValueError):
         '''
 
 
-TransferResult = namedtuple('TransferResult', ('transfer_type', 'trip', 'days_when_best'))
-
-
 def consider_transfer(data, days_to_match, trip, cont_trip, shift_days):
     wait_time = cont_trip.first_departure - trip.last_arrival
 
@@ -105,8 +101,15 @@ def consider_transfer(data, days_to_match, trip, cont_trip, shift_days):
     if not days_when_best:
         return None
 
-    transfer_type = classify_transfer(data, trip, wait_time, cont_trip)
-    return TransferResult(transfer_type, cont_trip, frozenset(days_when_best))
+    return Transfer(
+        transfer_type=classify_transfer(data, trip, wait_time, cont_trip),
+        from_trip_id=trip.trip_id,
+        to_trip_id=cont_trip.trip_id,
+        # This field would allow us to immediately make the converted trip-to-trip transfers invariant of services,
+        # but existing trip-to-trip transfers in this feed might also need to be split by cases, so we are required
+        # to reconstruct this info anyway. (TODO: Field probably to be deleted...)
+        days_when_best=days_when_best
+    )
 
 
 def match_transfer(data, days_to_match, trip, wait_time, cont_trip, shift_days):
@@ -171,3 +174,8 @@ def classify_transfer(data, trip, wait_time, cont_trip):
 
     # We presume that the rider will be able to stay onboard the vehicle
     return TransferType.IN_SEAT
+
+
+def add_transfers(gtfs, transfers):
+    for transfer in transfers:
+        gtfs.transfers.setdefault(transfer.from_trip_id, {})[transfer.to_trip_id] = transfer

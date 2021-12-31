@@ -27,6 +27,9 @@ class GTFSTime(int):
         mins, secs = divmod(rem, 60)
         return '%02d:%02d:%02d' % (hours, mins, secs)
 
+    def __add__(self, other):
+        return GTFSTime(super().__add__(other))
+
     def __sub__(self, other):
         return GTFSTime(super().__sub__(other))
 
