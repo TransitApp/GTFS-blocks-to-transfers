@@ -1,15 +1,16 @@
 """
-When a single from_trip_id has transfers to multiple to_trip_ids, it may represent either of the following situations:
-(1) A vehicle splits at the end of its journey (e.g. train cars are decoupled and proceed to different destinations)
-(2) A single vehicle will serve various trips depending on the day of service (e.g. a continuation trip uses a different
-    route on Friday evenings.)
+If a from_trip_id has multiple trip-to-trip transfers, this might represent a train splitting up to continue on to
+multiple destinations, but it could also represent a varying continuation depending on the day of service, e.g.:
 
-Additionally, even when there is a single to_trip_id, the continuation trip might not operate on all of the days that
-from_trip_id operates on (e.g. additional trips on weekdays only.)
+    from_trip_id,to_trip_id,transfer_type
+    trip_bus_15,trip_bus_50_via_howe,5 # Friday evenings only
+    trip_bus_15,trip_bus_50_via_granville,5 # All other times
 
-This module makes trip-to-trip transfers 'invariant of service', that is to say that for every day of service of
-from_trip_id, all of the to_trip_ids are also operating. This requires duplicating from_trip_id for each variant case,
-and generating a synthetic service describing those days on which it occurs.
+Even when there is only one outgoing trip-to-trip transfer, the to_trip_id might only run on certain days (e.g. an added
+run on weekdays).
+
+This module 'specializes' the from_trip_id to ensure that each trip's continuations are always applicable on all days
+of operation.
 """
 from . import config, convert
 from .editor import duplicate
@@ -26,54 +27,77 @@ def make_invariant(data):
     data.num_split_services = 0
     data.clusters = {}
 
-    added_transfers = specialized_transfers(data)
+    # Narrow down from_trip_ids to intersect with each of their to_trip_ids
+    with_specialized_transfers = specialized_transfers(data)
 
-    # Insert the 'specialized forms' of any transfers we discover
-    for transfer in added_transfers:
-        data.gtfs.transfers.setdefault(transfer.from_trip_id, {})[transfer.to_trip_id] = transfer
-
-    # TBD: replace all references to the cluster roots with references to each of their members
+    # Find incoming transfers to any modified trips and expand them for each specialized trip created
+    data.gtfs.transfers = expand_incoming_transfers(data, with_specialized_transfers)
 
 
 def specialized_transfers(data):
-    added_transfers = []
-    for from_trip_id, transfers in data.gtfs.transfers.items():
+    with_specialized_transfers = {}
+    for from_trip_id, transfers_out in data.gtfs.transfers.items():
         # Other types of transfers (e.g. stop-to-stop)
         if not from_trip_id:
             continue
 
-        days_to_match = set(data.days_by_service[data.gtfs.trips[from_trip_id].service_id])
+        from_days = data.days_by_service[data.gtfs.trips[from_trip_id].service_id]
+        unmatched_from_days = set(from_days)
         from_trip = data.gtfs.trips[from_trip_id]
         shift_days = 1 if from_trip.shifted_to_next_day else 0
 
-        for to_trip_id, transfer in transfers.items():
-            # We have to do the fucking 24h correction again
+        for to_trip_id, transfer in transfers_out.items():
             to_trip = data.gtfs.trips[to_trip_id]
-            print(from_trip.last_arrival, to_trip.first_departure)
             wraparound = 1 if to_trip.first_departure < from_trip.last_arrival else 0
 
-            days_when_running = convert.get_shifted_days_of_service(data.days_by_service, to_trip,
+            to_days = convert.get_shifted_days_of_service(data.days_by_service, to_trip,
                                                                     shift_days + wraparound)
 
-            days_when_running.intersection_update(days_to_match)
-            if not days_when_running:
+            to_days.intersection_update(from_days)
+            if not to_days:
                 print(f'Warning! Transfer between trips that never run on same day {from_trip_id} -> {to_trip_id}')
 
-            days_to_match.difference_update(days_when_running)
+            unmatched_from_days.difference_update(to_days)
 
-            if days_to_match:
-                specialized_trip_id = specialize(data, from_trip_id, days_when_running)
-                # Insert a transfer referring to the specialized trip
-                specialized_transfer = transfer.duplicate()
-                specialized_transfer.from_trip_id = specialized_trip_id
-                added_transfers.append(specialized_transfer)
-                print('Variable continuation [fork type]', specialized_trip_id, from_trip_id, to_trip_id)
+            # FIXME: what about this mess
+            # big_train,branch_1 # mon-fri
+            # big_train,branch_2 # mon-thu
+            # big_train,branch_3 # thu
+            
+            if from_days == to_days:
+                with_specialized_transfers.setdefault(from_trip_id, {})[to_trip_id] = transfer
+                continue
 
-        if days_to_match:
-            specialized_trip_id = specialize(data, from_trip_id, days_to_match)
+            specialized_trip_id = specialize(data, from_trip_id, to_days)
+
+            # Insert a transfer referring to the specialized trip
+            specialized_transfer = transfer.duplicate()
+            specialized_transfer.from_trip_id = specialized_trip_id
+            with_specialized_transfers.setdefault(specialized_trip_id, {})[to_trip_id] = specialized_transfer
+            print('Variable continuation [fork type]', specialized_trip_id, from_trip_id, to_trip_id)
+
+        if unmatched_from_days:
+            specialized_trip_id = specialize(data, from_trip_id, unmatched_from_days)
             print('Variable continuation [terminal type]', specialized_trip_id, from_trip_id)
 
-    return added_transfers
+    return with_specialized_transfers
+
+
+def expand_incoming_transfers(data, transfers):
+    expanded_transfers = {}
+    for from_trip_id, transfers_out in transfers.items():
+        for to_trip_id, transfer in transfers_out.items():
+            specialized_trip_ids = data.clusters.get(to_trip_id, {}).values()
+            if not specialized_trip_ids:
+                expanded_transfers.setdefault(from_trip_id, {})[to_trip_id] = transfer
+
+            for specialized_trip_id in specialized_trip_ids:
+                in_transfer = transfer.duplicate()
+                in_transfer.to_trip_id = specialized_trip_id
+
+                expanded_transfers.setdefault(from_trip_id, {})[specialized_trip_id] = in_transfer
+
+    return expanded_transfers
 
 
 def specialize(data, trip_id, days):
@@ -91,6 +115,7 @@ def specialized_trip_for_service(data, trip_id, service_id):
     specialized_trip_id = f'{trip_id}_b2t:if_{service_id}'
     cluster[service_id] = specialized_trip_id
     duplicate(data.gtfs.trips, trip_id, specialized_trip_id)
+    data.gtfs.trips[specialized_trip_id].service_id = service_id
     duplicate(data.gtfs.stop_times, trip_id, specialized_trip_id)
     return specialized_trip_id
 
