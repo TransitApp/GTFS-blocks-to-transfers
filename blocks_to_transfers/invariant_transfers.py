@@ -28,10 +28,10 @@ def make_invariant(data):
     data.clusters = {}
 
     # Narrow down from_trip_ids to intersect with each of their to_trip_ids
-    with_specialized_transfers = specialized_transfers(data)
+    data.gtfs.transfers = specialized_transfers(data)
 
     # Find incoming transfers to any modified trips and expand them for each specialized trip created
-    data.gtfs.transfers = expand_incoming_transfers(data, with_specialized_transfers)
+    #data.gtfs.transfers = expand_incoming_transfers(data, with_specialized_transfers)
 
 
 def specialized_transfers(data):
@@ -42,6 +42,9 @@ def specialized_transfers(data):
             continue
 
         from_days = data.days_by_service[data.gtfs.trips[from_trip_id].service_id]
+
+        variants = set()
+
         unmatched_from_days = set(from_days)
         from_trip = data.gtfs.trips[from_trip_id]
         shift_days = 1 if from_trip.shifted_to_next_day else 0
@@ -53,34 +56,53 @@ def specialized_transfers(data):
             to_days = convert.get_shifted_days_of_service(data.days_by_service, to_trip,
                                                                     shift_days + wraparound)
 
-            to_days.intersection_update(from_days)
-            if not to_days:
-                print(f'Warning! Transfer between trips that never run on same day {from_trip_id} -> {to_trip_id}')
-
+            transfer.continuation_days = frozenset(from_days.intersection(to_days))
             unmatched_from_days.difference_update(to_days)
+            variants.add(transfer.continuation_days)
 
-            # FIXME: what about this mess
-            # big_train,branch_1 # mon-fri
-            # big_train,branch_2 # mon-thu
-            # big_train,branch_3 # thu
-            
-            if from_days == to_days:
-                with_specialized_transfers.setdefault(from_trip_id, {})[to_trip_id] = transfer
-                continue
+        if not unmatched_from_days and len(variants) <= 1:
+            # Pass-through
+            with_specialized_transfers[from_trip_id] = transfers_out.copy()
+            continue
 
-            specialized_trip_id = specialize(data, from_trip_id, to_days)
+        for variant_days in variants:
+            specialized_trip_id = specialize(data, from_trip_id, variant_days)
 
-            # Insert a transfer referring to the specialized trip
-            specialized_transfer = transfer.duplicate()
-            specialized_transfer.from_trip_id = specialized_trip_id
-            with_specialized_transfers.setdefault(specialized_trip_id, {})[to_trip_id] = specialized_transfer
-            print('Variable continuation [fork type]', specialized_trip_id, from_trip_id, to_trip_id)
+            for to_trip_id, transfer in transfers_out.items():
+                if not variant_days.intersection(transfer.continuation_days):
+                    continue
+
+                specialized_transfer = transfer.duplicate()
+                specialized_transfer.from_trip_id = specialized_trip_id
+                with_specialized_transfers.setdefault(specialized_trip_id, {})[to_trip_id] = specialized_transfer
+                print('Variable continuation [fork type]', specialized_trip_id, from_trip_id, to_trip_id)
 
         if unmatched_from_days:
             specialized_trip_id = specialize(data, from_trip_id, unmatched_from_days)
             print('Variable continuation [terminal type]', specialized_trip_id, from_trip_id)
 
     return with_specialized_transfers
+
+"""
+    new_transfers = with_specialized_transfers.setdefault(from_trip_id, {})
+    for to_trip_id, transfer in transfers_out.items():
+        new_transfers[to_trip_id] = transfer
+
+    continue
+
+    specialized_trip_id = specialize(data, from_trip_id, to_days)
+
+    # Insert a transfer referring to the specialized trip
+    specialized_transfer = transfer.duplicate()
+    specialized_transfer.from_trip_id = specialized_trip_id
+    with_specialized_transfers.setdefault(specialized_trip_id, {})[to_trip_id] = specialized_transfer
+    print('Variable continuation [fork type]', specialized_trip_id, from_trip_id, to_trip_id)
+
+
+if unmatched_from_days:
+    specialized_trip_id = specialize(data, from_trip_id, unmatched_from_days)
+    print('Variable continuation [terminal type]', specialized_trip_id, from_trip_id)
+"""
 
 
 def expand_incoming_transfers(data, transfers):

@@ -59,6 +59,7 @@ class Trip(Entity):
     def first_stop_time(self):
         return self._gtfs.stop_times[self.trip_id][0]
 
+
     @property
     def last_stop_time(self):
         return self._gtfs.stop_times[self.trip_id][-1]
