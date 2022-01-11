@@ -1,13 +1,12 @@
 import argparse
-from . import editor, augment, convert, invariant_transfers
+from . import editor, augment, convert, expand_dag
 
 
 def process(in_dir, out_dir):
     gtfs = editor.load(in_dir)
     data = augment.augment(gtfs)
     trip_transfers = convert.convert_blocks(data)
-    convert.add_transfers(gtfs, trip_transfers)
-    invariant_transfers.make_invariant(data)
+    expand_dag.expand(data, trip_transfers)
 
     editor.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir)
     print('Done.')

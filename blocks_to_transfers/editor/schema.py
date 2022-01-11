@@ -53,6 +53,7 @@ class Trip(Entity):
     route_id: str
 
     def __init__(self, **kwargs):
+        self.visited = False
         super().__init__(**kwargs)
 
     @property

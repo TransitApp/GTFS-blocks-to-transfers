@@ -29,17 +29,21 @@ def convert_blocks(data):
 
 def convert_block(data, trips):
     converted_transfers = []
+
     for i_trip, trip in enumerate(trips):
-        if not config.TripToTripTransfers.overwrite_existing and trip in data.gtfs.transfers:
+        if not config.TripToTripTransfers.overwrite_existing and trip.trip_id in data.gtfs.transfers:
+            converted_transfers.extend(data.gtfs.transfers[trip.trip_id])
             continue
 
         days_to_match = set(data.days_by_service[trip.service_id])
         shift_days = 1 if trip.shifted_to_next_day else 0
+        any_matches = False
 
         try:
             for cont_trip in trips[i_trip + 1:]:
                 transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip, shift_days)
                 if transfer_opt:
+                    any_matches = True
                     converted_transfers.append(transfer_opt)
 
             # Search continues onto the next day; shift days of service from continuation trips back one day to match
@@ -49,6 +53,7 @@ def convert_block(data, trips):
             for cont_trip in trips[:i_trip]:
                 transfer_opt = consider_transfer(data, days_to_match, trip, cont_trip, shift_days)
                 if transfer_opt:
+                    any_matches = True
                     converted_transfers.append(transfer_opt)
 
         except StopIteration:
@@ -56,14 +61,32 @@ def convert_block(data, trips):
             pass
 
         # If days_to_match is not empty, it results in an additional case where trip has no continuation on certain days
-        # of service, but we do not need to explicitly store this, as the trip-to-trip transfers we do write will be
-        # ignored unless both trips are operating.
+        # of service. We don't need to export this 'transfer' to transfers.txt but it must be taken into account when
+        # duplicating trips.
+        """
+        if any_matches and days_to_match:
+            converted_transfers.append(Transfer(
+                transfer_type=TransferType.NOT_POSSIBLE,
+                from_trip_id=trip.trip_id,
+                to_trip_id=None,
+                days_when_best=days_to_match
+            ))
+        """
 
     return converted_transfers
 
 
 def pdates(dates):
     sdates = sorted(date.strftime('%m%d') for date in dates)
+    tdates =  ', '.join(sdates[:14])
+    if len(dates) > 14:
+        tdates += ' ...'
+    return tdates
+
+
+def wdates(dates):
+    sdates = sorted(date for date in dates)
+    sdates = [date.strftime('%a') for date in sdates]
     tdates =  ', '.join(sdates[:14])
     if len(dates) > 14:
         tdates += ' ...'
@@ -178,4 +201,7 @@ def classify_transfer(data, trip, wait_time, cont_trip):
 
 def add_transfers(gtfs, transfers):
     for transfer in transfers:
+        if transfer.transfer_type == TransferType.NOT_POSSIBLE:
+            continue
+
         gtfs.transfers.setdefault(transfer.from_trip_id, {})[transfer.to_trip_id] = transfer
