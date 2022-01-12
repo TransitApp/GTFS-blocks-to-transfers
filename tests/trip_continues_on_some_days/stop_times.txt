@@ -14,3 +14,10 @@ trip_4,2,junction,20:50:00,20:50:00
 trip_5,0,junction,21:00:00,21:00:00
 trip_5,1,slocan_park,21:25:00,21:25:00
 trip_5,2,slocan_city,21:50:00,21:50:00
+vs_1,0,slocan_city,08:00:00,08:00:00
+vs_1,1,slocan_park,08:25:00,08:25:00
+vs_2,0,slocan_park,08:26:00,08:26:00
+vs_2,1,storbo,08:27:00,08:27:00
+vs_2,2,slocan_park,08:28:00,08:28:00
+vs_3,0,slocan_park,08:30:00,08:30:00
+vs_3,1,slocan_city,08:55:00,08:55:00

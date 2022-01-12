@@ -96,8 +96,11 @@ class Entity:
     def __repr__(self):
         return f'{self.__class__.__name__} {repr(self.__dict__)}'
 
-    def duplicate(self):
-        return self.__class__(**self.__dict__)
+    def duplicate(self, **overrides):
+        merged = self.__dict__.copy()
+        merged.update(overrides)
+
+        return self.__class__(**merged)
 
 
 def saved_property(compute_fn):

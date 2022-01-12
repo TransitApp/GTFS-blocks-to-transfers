@@ -18,6 +18,7 @@ def convert_blocks(data):
     print('Predicting continuations')
     converted_transfers = []
 
+    del data.trips_by_block['brown_loop']
     for trips in data.trips_by_block.values():
         try:
             converted_transfers.extend(convert_block(data, trips))
