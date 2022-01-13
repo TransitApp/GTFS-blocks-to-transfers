@@ -21,3 +21,11 @@ vs_2,1,storbo,08:27:00,08:27:00
 vs_2,2,slocan_park,08:28:00,08:28:00
 vs_3,0,slocan_park,08:30:00,08:30:00
 vs_3,1,slocan_city,08:55:00,08:55:00
+cycle_1,0,slocan_city,05:00:00,05:00:00
+cycle_1,1,junction,05:30:00,05:30:00
+cycle_2,0,junction,11:00:00,11:00:00
+cycle_2,1,slocan_city,11:30:00,11:30:00
+cycle_3,0,slocan_city,17:00:00,17:00:00
+cycle_3,1,junction,17:30:00,17:30:00
+cycle_4,0,junction,23:00:00,23:00:00
+cycle_4,1,slocan_city,23:30:00,23:30:00

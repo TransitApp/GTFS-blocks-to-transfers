@@ -21,6 +21,7 @@ class Graph:
     def __init__(self):
         self.sources = set()
         self.sinks = set()
+        self.ends = set()
 
     def adjust(self, node):
         if not node.in_edges:
@@ -46,6 +47,7 @@ class Node:
         self.in_edges = in_edges if in_edges is not None else {}
         self.out_edges = out_edges if out_edges is not None else {}
         self.visited = False
+        self.visited2 = False
 
     def __eq__(self, other):
         return id(self) == id(other)
@@ -67,6 +69,9 @@ def graph_of_transfers(data, transfers):
     G = Graph()
     for transfer in transfers:
         v = get_node(data, node_of_trip, transfer.from_trip_id)
+        if v.trip_id == 'cycle_4':
+           magic = v
+
         w = get_node(data, node_of_trip, transfer.to_trip_id)
         v.out_edges[w] = transfer
         G.adjust(v)
@@ -74,6 +79,7 @@ def graph_of_transfers(data, transfers):
         w.in_edges[v] = transfer
         G.adjust(w)
 
+    G.ends.add(magic)
     return G
 
 
@@ -89,14 +95,16 @@ def get_node(data, node_of_trip, trip_id):
 
 def split_nodes(G):
     print('Duplicating nodes')
-    queue = deque(G.sinks)
+    queue = deque(G.sinks | G.ends)
 
     while queue:
         to_trip = queue.popleft()
+
         if to_trip.visited:
             continue
 
         to_trip.visited = True
+        print('v', to_trip)
 
         for from_trip, transfer in list(to_trip.in_edges.items()):
             # TODO: v.days needs to be 'adapted' back to w's service (+24 and also blocks continuing onto the next day)
@@ -104,11 +112,13 @@ def split_nodes(G):
             if not cont_days:
                 # from and to trip never run on the same day; remove edge
                 G.del_edge(from_trip, to_trip)
+                print('\tx', from_trip)
                 continue
 
             # Days when from_trip operates but can't continue to to_trip
             residual_days = from_trip.days - to_trip.days
             if not residual_days:
+                print('\t>', from_trip)
                 # If none, then graph doesn't require adjustment
                 queue.append(from_trip)
                 continue
@@ -116,17 +126,26 @@ def split_nodes(G):
             # Create a new node called from_trip_if_cont representing the case where from_trip -> to_trip is possible,
             # and link it to the other nodes in the graph.
             from_trip_if_cont = from_trip.split(cont_days, (to_trip, transfer))
+            print('\tc',from_trip_if_cont)
             for from_from_trip, from_from_transfer in from_trip_if_cont.in_edges.items():
                 from_from_trip.out_edges[from_trip_if_cont] = from_from_transfer
 
+            from_trip.visited = False
             G.adjust(from_trip_if_cont)
             to_trip.in_edges[from_trip_if_cont] = transfer
+
+            if from_trip in G.ends:
+                G.ends.add(from_trip_if_cont)
+
             queue.append(from_trip_if_cont)
 
             # Mutate from_trip, leaving it only the residual days where from_trip -> to_trip don't occur
             from_trip.days = residual_days
             G.del_edge(from_trip, to_trip)
-            queue.append(from_trip)
+            print('\tr', from_trip)
+
+            if from_trip in G.sinks:
+                queue.append(from_trip)
 
 
 def export_graph(data, G):
@@ -136,9 +155,13 @@ def export_graph(data, G):
     """
     transfers = []
 
-    stack = list(G.sources)
+    stack = list(G.sources | G.ends)
     while stack:
         from_node = stack.pop()
+        if from_node.visited2:
+            continue
+
+        from_node.visited2 = True
         from_trip_id = instantiate_trip(data, from_node)
 
         for to_node, transfer_model in from_node.out_edges.items():
@@ -149,10 +172,10 @@ def export_graph(data, G):
                 to_trip_id=to_trip_id
             )
 
+            print(f'{transfer.from_trip_id},{transfer.to_trip_id},{transfer.transfer_type}')
             transfers.append(transfer)
             stack.append(to_node)
 
-    pprint.pprint(transfers)
     return transfers
 
 
@@ -166,13 +189,13 @@ def instantiate_trip(data, node):
         specialized_trip_id = f'{node.trip_id}_b2t:if_{service_id}'
 
     if specialized_trip_id not in data.gtfs.trips:
-        print('Create', specialized_trip_id)
         trip.tombstone = True
         duplicate(data.gtfs.trips, node.trip_id, specialized_trip_id)
         duplicate(data.gtfs.stop_times, node.trip_id, specialized_trip_id)
         data.gtfs.trips[specialized_trip_id].service_id = service_id
 
     return specialized_trip_id
+
 
 def ensure_service(data, days):
         days = frozenset(days)

@@ -7,3 +7,7 @@ red,trip_5,mon-tues-wed-thurs,red_loop
 brown,vs_1,mon-tues-wed-thurs-fri-sat-sun,brown_loop
 brown,vs_2,fri-sat,brown_loop
 brown,vs_3,fri-sat-sun,brown_loop
+blue,cycle_1,mon-tues-wed-thurs-fri-sat-sun,blue_loop
+blue,cycle_2,mon-tues-wed-thurs-fri-sat-sun,blue_loop
+blue,cycle_3,mon-tues-wed-thurs,blue_loop
+blue,cycle_4,mon-tues-wed-thurs-fri-sat-sun,blue_loop

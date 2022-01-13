@@ -1,0 +1,5 @@
+from_trip_id,to_trip_id,transfer_type
+cycle_1,cycle_2,4
+cycle_2,cycle_3,4
+cycle_3,cycle_4,4
+cycle_4,cycle_1,4

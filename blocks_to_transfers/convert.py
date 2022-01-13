@@ -33,7 +33,7 @@ def convert_block(data, trips):
 
     for i_trip, trip in enumerate(trips):
         if not config.TripToTripTransfers.overwrite_existing and trip.trip_id in data.gtfs.transfers:
-            converted_transfers.extend(data.gtfs.transfers[trip.trip_id])
+            converted_transfers.extend(data.gtfs.transfers[trip.trip_id].values())
             continue
 
         days_to_match = set(data.days_by_service[trip.service_id])
