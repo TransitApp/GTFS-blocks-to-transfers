@@ -1,7 +1,7 @@
 import pprint
 from collections import deque
 
-from blocks_to_transfers.convert import wdates
+from blocks_to_transfers.block_converter import wdates
 from blocks_to_transfers.editor import duplicate
 from blocks_to_transfers.editor.schema import Transfer, CalendarDate, ExceptionType
 from blocks_to_transfers.editor.types import GTFSDate

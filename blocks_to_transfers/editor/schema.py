@@ -70,16 +70,16 @@ class Trip(Entity):
         return tuple(self._gtfs.stops[st.stop_id].location for st in self._gtfs.stop_times[self.trip_id])
 
     @saved_property
-    def shifted_to_next_day(self):
-        return self.first_stop_time.departure_time >= DAY_SEC
+    def shift_days(self):
+        return 1 if self.first_stop_time.departure_time >= DAY_SEC else 0
 
     @saved_property
     def first_departure(self):
-        return self.first_stop_time.departure_time - DAY_SEC*self.shifted_to_next_day
+        return self.first_stop_time.departure_time - DAY_SEC*self.shift_days
 
     @saved_property
     def last_arrival(self):
-        return self.last_stop_time.arrival_time - DAY_SEC*self.shifted_to_next_day
+        return self.last_stop_time.arrival_time - DAY_SEC*self.shift_days
 
     @saved_property
     def first_point(self):
@@ -113,7 +113,7 @@ class Stop(Entity):
 
 
 class Transfer(Entity):
-    _schema = File(id='from_trip_id', name='transfers', required=False, group_id='to_trip_id', inner_dict=True)
+    _schema = File(id='from_trip_id', name='transfers', required=False, group_id='to_trip_id')
 
     from_trip_id: str = ''
     to_trip_id: str = ''

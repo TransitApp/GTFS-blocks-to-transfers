@@ -29,3 +29,8 @@ cycle_3,0,slocan_city,17:00:00,17:00:00
 cycle_3,1,junction,17:30:00,17:30:00
 cycle_4,0,junction,23:00:00,23:00:00
 cycle_4,1,slocan_city,23:30:00,23:30:00
+ws_1,0,slocan_city,07:55:00,07:55:00
+ws_1,1,slocan_park,08:20:00,08:20:00
+ws_2,0,slocan_park,08:26:00,08:26:00
+ws_2,1,storbo,08:27:00,08:27:00
+ws_2,2,slocan_park,08:28:00,08:28:00
