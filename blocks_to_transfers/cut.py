@@ -1,5 +1,5 @@
 import collections
-from re import L
+from http.client import CONFLICT
 from blocks_to_transfers import service_days
 from blocks_to_transfers.service_days import wdates
 
@@ -51,9 +51,9 @@ class Node:
         self.days -= new_days
         return Node(self.trip_id, new_days, self.in_edges.copy(), self.out_edges.copy())
 
-def convert(gtfs, services):
-    graph = import_transfers(gtfs, services)
-    greedy_split_simple(graph)
+def convert(gtfs, services, conflicts):
+    index, graph = import_transfers(gtfs, services)
+    fix_conflicts(graph, index, conflicts)
     backprop_split(graph, gtfs)
     export_visit(graph)
     
@@ -61,7 +61,7 @@ def import_transfers(gtfs, services):
     """
     ws series are fakes for testing, they violate the spec so we have to flag them
     """
-    gtfs.transfers['ws_1'][0]._has_conflict = True
+    gtfs.transfers['ws_1'][1]._days_when_best = services.days_by_trip(gtfs.trips['ws_2'])
     gtfs.transfers['ws_1'][0]._days_when_best = services.days_by_trip(gtfs.trips['vs_3']) - services.days_by_trip(gtfs.trips['ws_2'])
 
     trip_node = {}
@@ -77,7 +77,7 @@ def import_transfers(gtfs, services):
             graph.adjust(from_node)
             graph.adjust(to_node)
 
-    return graph
+    return trip_node, graph
 
 
 def make_node(gtfs, services, trip_node, trip_id):
@@ -87,6 +87,32 @@ def make_node(gtfs, services, trip_node, trip_id):
     
     node = trip_node[trip_id] = Node(trip_id, services.days_by_trip(gtfs.trips[trip_id]))
     return node
+
+def fix_conflicts(graph, index, conflicts):
+    conflicts.insert(1, 'ws_1')
+    print(conflicts)
+    for from_trip_id in conflicts:
+        from_node = index[from_trip_id]
+        for to_node, transfer in list(from_node.out_edges.items()):
+            to_node_split = to_node.split(set(transfer._days_when_best))
+
+            if to_node_split is Keep:
+                print('RETAIN', from_node.trip_id, '->', to_node.trip_id, 'limit', wdates(transfer._days_when_best), 'max', wdates(to_node.days))
+                continue
+
+            if to_node_split is None:
+                print('IGNORE', from_node.trip_id, '->', to_node.trip_id, 'limit', wdates(transfer._days_when_best), 'max', wdates(to_node.days))
+            else:
+                print('MODIFY', from_node.trip_id, '->', to_node.trip_id, 'limit', wdates(transfer._days_when_best), 'split', wdates(to_node.days))
+
+            del from_node.out_edges[to_node]
+            del to_node.in_edges[from_node]
+
+            graph.adjust(to_node_split)
+            graph.adjust(from_node)
+            graph.adjust(to_node)
+
+
 
 # Greedy split CANNOT be used if any vehicle splits might be in input!
 def greedy_split(graph):
