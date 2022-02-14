@@ -3,6 +3,4 @@ cycle_1,cycle_2,4
 cycle_2,cycle_3,4
 cycle_3,cycle_4,4
 cycle_4,cycle_1,4
-ws_1,ws_2,5
-ws_1,vs_3,5
 ws_2,vs_3,5

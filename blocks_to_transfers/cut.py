@@ -1,12 +1,17 @@
 import collections
 
+from blocks_to_transfers.editor.schema import Transfer
+
 class Graph:
-    def __init__(self) -> None:
+    def __init__(self, gtfs, services) -> None:
+        self.gtfs = gtfs
+        self.services = services
         self.sources = set()
         self.sinks = set()
+        self.primary_nodes = {}
 
     def adjust(self, node):
-        if not node:
+        if not node or node is Keep:
             return 
 
         if not node.in_edges:
@@ -18,11 +23,44 @@ class Graph:
             self.sources.discard(node)
             self.sinks.discard(node)
 
+    
+    def primary_node(self, trip_id):
+        node = self.primary_nodes.get(trip_id)
+        if node:
+            return node
+    
+        trip = self.gtfs.trips[trip_id]
+        node = self.primary_nodes[trip_id] = Node(trip, self.services.days_by_trip(trip))
+        return node
+
+    def primary_edge(self, transfer):
+        from_node = self.primary_node(transfer.from_trip_id)
+        to_node = self.primary_node(transfer.to_trip_id)
+        from_node.out_edges[to_node] = to_node.in_edges[from_node] = transfer
+
+        self.adjust(from_node)
+        self.adjust(to_node)
+        return from_node, to_node
+
+    def split(self, target_node, from_node, to_node, days):
+        node_split = target_node.split(days)
+        if node_split is Keep:
+            return node_split
+
+        del from_node.out_edges[to_node]
+        del to_node.in_edges[from_node]
+
+        self.adjust(from_node)
+        self.adjust(to_node)
+        self.adjust(node_split)
+        return node_split
+
+
 Keep = object()
 
 class Node:
-    def __init__(self, trip_id, days, in_edges=None, out_edges=None) -> None:
-        self.trip_id = trip_id
+    def __init__(self, trip, days, in_edges=None, out_edges=None) -> None:
+        self.trip = trip
         self.days = days
         self.in_edges = in_edges or {}
         self.out_edges = out_edges or {}
@@ -33,9 +71,12 @@ class Node:
         for out_node, edge in self.out_edges.items():
             out_node.in_edges[self] = edge
 
+    @property
+    def trip_id(self):
+        return self.trip.trip_id
 
     def __repr__(self) -> str:
-        return f'Node [{self.trip_id} on {wdates(self.days)}]'
+        return '???'
 
     def split(self, new_days):
         if new_days.issuperset(self.days):
@@ -45,71 +86,56 @@ class Node:
         
         new_days = new_days.intersection(self.days)
         self.days = self.days.difference(new_days)
-        return Node(self.trip_id, new_days, self.in_edges.copy(), self.out_edges.copy())
+        return Node(self.trip, new_days, self.in_edges.copy(), self.out_edges.copy())
 
-def convert(gtfs, services, conflicts):
-    index, graph = import_transfers(gtfs, services)
-    fix_conflicts(graph, index, conflicts, services)
-    backprop_split(graph, gtfs)
+def convert(gtfs, services, generated_transfers):
+    # For testing inject some fake transfers
+    generated_transfers.append(Transfer(
+        from_trip_id='ws_1',
+        to_trip_id='ws_2',
+        _partial_days=False,
+        _days_when_best=(services.days_by_trip(gtfs.trips['ws_2'])
+            .intersection(services.days_by_trip(gtfs.trips['ws_1'])))
+    ))
+
+    generated_transfers.append(Transfer(
+        from_trip_id='ws_1',
+        to_trip_id='vs_3',
+        _partial_days=True,
+        _days_when_best=(services.days_by_trip(gtfs.trips['vs_3'])
+            .difference(services.days_by_trip(gtfs.trips['ws_2']))
+            .intersection(services.days_by_trip(gtfs.trips['ws_1'])))
+    ))
+
+    graph = Graph(gtfs, services)
+    import_provided_transfers(graph, gtfs)
+    import_generated_transfers(graph, generated_transfers)
+    backprop_split(graph)
     export_visit(graph, services)
     
-def import_transfers(gtfs, services):
-    """
-    ws series are fakes for testing, they violate the spec so we have to flag them
-    """
-    gtfs.transfers['ws_1'][1]._days_when_best = services.days_by_trip(gtfs.trips['ws_2'])
-    gtfs.transfers['ws_1'][0]._days_when_best = services.days_by_trip(gtfs.trips['vs_3']).difference(services.days_by_trip(gtfs.trips['ws_2']))
 
-    trip_node = {}
-    graph = Graph()
-    for from_trip_id, transfers in sorted(gtfs.transfers.items(), key=lambda kv: gtfs.trips[kv[0]].first_departure):
-        from_node = make_node(gtfs, services, trip_node, from_trip_id)
-        for transfer in sorted(transfers, key=lambda v: gtfs.trips[v.to_trip_id].first_departure):
-            to_trip_id = transfer.to_trip_id
-            to_node = make_node(gtfs, services, trip_node, to_trip_id)
+def import_provided_transfers(graph, gtfs):
+    for transfers in gtfs.transfers.values():
+        for transfer in transfers:
+           graph.primary_edge(transfer)
 
-            from_node.out_edges[to_node] = transfer
-            to_node.in_edges[from_node] = transfer
-            graph.adjust(from_node)
-            graph.adjust(to_node)
+def import_generated_transfers(graph, generated_transfers):
+    for transfer in generated_transfers:
+        from_node, to_node = graph.primary_edge(transfer)
 
-    return trip_node, graph
-
-
-def make_node(gtfs, services, trip_node, trip_id):
-    node = trip_node.get(trip_id)
-    if node:
-        return node
-    
-    node = trip_node[trip_id] = Node(trip_id, services.days_by_trip(gtfs.trips[trip_id]))
-    return node
-
-def fix_conflicts(graph, index, conflicts, services):
-    conflicts.insert(1, 'ws_1')
-    print(conflicts)
-    for from_trip_id in conflicts:
-        from_node = index[from_trip_id]
-        for to_node, transfer in list(from_node.out_edges.items()):
-            to_node_split = to_node.split(transfer._days_when_best)
-
+        if getattr(transfer, '_partial_days', False):
+            to_node_split = graph.split(to_node, from_node, to_node, transfer._days_when_best)
             if to_node_split is Keep:
-                print('RETAIN', from_node.trip_id, '->', to_node.trip_id, 'limit', services.bdates(transfer._days_when_best), 'max', services.bdates(to_node.days))
-                continue
-
-            if to_node_split is None:
-                print('IGNORE', from_node.trip_id, '->', to_node.trip_id, 'limit', services.bdates(transfer._days_when_best), 'max', services.bdates(to_node.days))
+                desc = 'Keep'
+            elif not to_node_split:
+                desc = 'Delete'
             else:
-                print('MODIFY', from_node.trip_id, '->', to_node.trip_id, 'limit', services.bdates(transfer._days_when_best), 'split', services.bdates(to_node.days))
+                desc = 'Modify'
 
-            del from_node.out_edges[to_node]
-            del to_node.in_edges[from_node]
+            print(desc, from_node.trip_id, '->', to_node.trip_id, 
+                'limit', graph.services.bdates(transfer._days_when_best), 'split', graph.services.bdates(to_node.days))
 
-            graph.adjust(to_node_split)
-            graph.adjust(from_node)
-            graph.adjust(to_node)
-
-
-def backprop_split(graph, gtfs):
+def backprop_split(graph):
     queue = collections.deque(graph.sinks)
     visited = set()
 
@@ -120,20 +146,13 @@ def backprop_split(graph, gtfs):
 
         visited.add(to_node)
         for from_node in list(to_node.in_edges.keys()):
-            shift_days = -1 if gtfs.trips[to_node.trip_id].first_departure < gtfs.trips[from_node.trip_id].last_arrival else 0
+            shift_days = -1 if to_node.trip.first_departure < from_node.trip.last_arrival else 0
             to_days_in_from_ref = to_node.days.shift(shift_days)
-
-            from_node_split = from_node.split(to_days_in_from_ref)
+            from_node_split = graph.split(from_node, from_node, to_node, to_days_in_from_ref)
 
             if from_node_split is Keep:
                 queue.append(from_node)
                 continue
-            
-            del from_node.out_edges[to_node]
-            del to_node.in_edges[from_node]
-            graph.adjust(from_node)
-            graph.adjust(to_node)
-            graph.adjust(from_node_split)
 
             if from_node_split:
                 queue.append(from_node_split)

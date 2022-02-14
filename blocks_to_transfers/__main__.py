@@ -11,9 +11,8 @@ def process(in_dir, out_dir):
     # Will be needed later to process existing trip-to-trip transfers
     services = ServiceDays(gtfs)
 
-    converted_transfers, conflicts = block_converter.convert_blocks(gtfs, services)
-    block_converter.add_transfers(gtfs, converted_transfers)
-    cut.convert(gtfs, services, conflicts)
+    converted_transfers = block_converter.convert_blocks(gtfs, services)
+    cut.convert(gtfs, services, converted_transfers)
 
     #expand_dag.expand(data, trip_transfers)
 
