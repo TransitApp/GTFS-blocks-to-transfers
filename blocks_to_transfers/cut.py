@@ -1,8 +1,4 @@
 import collections
-from http.client import CONFLICT
-from blocks_to_transfers import service_days
-from blocks_to_transfers.service_days import wdates
-
 
 class Graph:
     def __init__(self) -> None:
@@ -47,22 +43,22 @@ class Node:
         elif new_days.isdisjoint(self.days):
             return None
         
-        new_days &= self.days
-        self.days -= new_days
+        new_days = new_days.intersection(self.days)
+        self.days = self.days.difference(new_days)
         return Node(self.trip_id, new_days, self.in_edges.copy(), self.out_edges.copy())
 
 def convert(gtfs, services, conflicts):
     index, graph = import_transfers(gtfs, services)
-    fix_conflicts(graph, index, conflicts)
+    fix_conflicts(graph, index, conflicts, services)
     backprop_split(graph, gtfs)
-    export_visit(graph)
+    export_visit(graph, services)
     
 def import_transfers(gtfs, services):
     """
     ws series are fakes for testing, they violate the spec so we have to flag them
     """
     gtfs.transfers['ws_1'][1]._days_when_best = services.days_by_trip(gtfs.trips['ws_2'])
-    gtfs.transfers['ws_1'][0]._days_when_best = services.days_by_trip(gtfs.trips['vs_3']) - services.days_by_trip(gtfs.trips['ws_2'])
+    gtfs.transfers['ws_1'][0]._days_when_best = services.days_by_trip(gtfs.trips['vs_3']).difference(services.days_by_trip(gtfs.trips['ws_2']))
 
     trip_node = {}
     graph = Graph()
@@ -88,22 +84,22 @@ def make_node(gtfs, services, trip_node, trip_id):
     node = trip_node[trip_id] = Node(trip_id, services.days_by_trip(gtfs.trips[trip_id]))
     return node
 
-def fix_conflicts(graph, index, conflicts):
+def fix_conflicts(graph, index, conflicts, services):
     conflicts.insert(1, 'ws_1')
     print(conflicts)
     for from_trip_id in conflicts:
         from_node = index[from_trip_id]
         for to_node, transfer in list(from_node.out_edges.items()):
-            to_node_split = to_node.split(set(transfer._days_when_best))
+            to_node_split = to_node.split(transfer._days_when_best)
 
             if to_node_split is Keep:
-                print('RETAIN', from_node.trip_id, '->', to_node.trip_id, 'limit', wdates(transfer._days_when_best), 'max', wdates(to_node.days))
+                print('RETAIN', from_node.trip_id, '->', to_node.trip_id, 'limit', services.bdates(transfer._days_when_best), 'max', services.bdates(to_node.days))
                 continue
 
             if to_node_split is None:
-                print('IGNORE', from_node.trip_id, '->', to_node.trip_id, 'limit', wdates(transfer._days_when_best), 'max', wdates(to_node.days))
+                print('IGNORE', from_node.trip_id, '->', to_node.trip_id, 'limit', services.bdates(transfer._days_when_best), 'max', services.bdates(to_node.days))
             else:
-                print('MODIFY', from_node.trip_id, '->', to_node.trip_id, 'limit', wdates(transfer._days_when_best), 'split', wdates(to_node.days))
+                print('MODIFY', from_node.trip_id, '->', to_node.trip_id, 'limit', services.bdates(transfer._days_when_best), 'split', services.bdates(to_node.days))
 
             del from_node.out_edges[to_node]
             del to_node.in_edges[from_node]
@@ -112,104 +108,6 @@ def fix_conflicts(graph, index, conflicts):
             graph.adjust(from_node)
             graph.adjust(to_node)
 
-
-
-# Greedy split CANNOT be used if any vehicle splits might be in input!
-def greedy_split(graph):
-    queue = collections.deque(graph.sources)
-    print(queue)
-    visited = set()
-
-    while queue:
-        from_node = queue.popleft()
-        if from_node in visited:
-            continue
-        
-        visited.add(from_node)
-
-        matched_days = set()
-        #match_cases = set()
-
-        for to_node in list(from_node.out_edges.keys()):
-            to_days = frozenset(to_node.days) # FIXME: requires shift factor
-            conflict = False
-
-            #f to_days in match_cases:
-            #    print('Exact conflict!', from_node.trip_id, '->', to_node.trip_id, 'limit', wdates(to_days))
-            #    continue #
-            
-            if not to_days.isdisjoint(matched_days):
-                conflict = True
-                to_days = frozenset(to_days - matched_days)
-                print('Conflict!', from_node.trip_id, '->', to_node.trip_id, 'limit', wdates(to_days))
-
-            #match_cases.add(to_days)
-            matched_days.update(to_days)
-
-            if not conflict:
-                queue.append(to_node)
-                continue
-
-            to_node_split = to_node.split(to_days)
-            del from_node.out_edges[to_node]
-            del to_node.in_edges[from_node]
-
-            graph.adjust(to_node_split)
-            graph.adjust(from_node)
-            graph.adjust(to_node)
-
-            if to_node_split:
-                queue.append(to_node_split)
-
-            if to_node in graph.sources:
-                queue.append(to_node)
-
-
-
-def greedy_split_simple(graph):
-    queue = collections.deque(graph.sources)
-    print(queue)
-    visited = set()
-
-    while queue:
-        from_node = queue.popleft()
-        if from_node in visited:
-            continue
-        
-        visited.add(from_node)
-
-        for to_node, transfer in list(from_node.out_edges.items()):
-            if not getattr(transfer, '_has_conflict', False):
-                #print('OK', from_node.trip_id, '->', to_node.trip_id)
-                queue.append(to_node)
-                continue
-            
-            to_node_split = to_node.split(set(transfer._days_when_best))
-            
-            if to_node_split is Keep:
-                print('RETAIN', from_node.trip_id, '->', to_node.trip_id, 'limit', wdates(transfer._days_when_best), 'max', wdates(to_node.days))
-                queue.append(to_node)
-                continue
-
-
-            if to_node_split is None:
-                print('IGNORE', from_node.trip_id, '->', to_node.trip_id, 'limit', wdates(transfer._days_when_best), 'max', wdates(to_node.days))
-            else:
-                print('MODIFY', from_node.trip_id, '->', to_node.trip_id, 'limit', wdates(transfer._days_when_best), 'split', wdates(to_node.days))
-
-            del from_node.out_edges[to_node]
-            del to_node.in_edges[from_node]
-
-            graph.adjust(to_node_split)
-            graph.adjust(from_node)
-            graph.adjust(to_node)
-
-            if to_node_split:
-                queue.append(to_node_split)
-
-            if to_node in graph.sources:
-                queue.append(to_node)
-           
 
 def backprop_split(graph, gtfs):
     queue = collections.deque(graph.sinks)
@@ -223,7 +121,7 @@ def backprop_split(graph, gtfs):
         visited.add(to_node)
         for from_node in list(to_node.in_edges.keys()):
             shift_days = -1 if gtfs.trips[to_node.trip_id].first_departure < gtfs.trips[from_node.trip_id].last_arrival else 0
-            to_days_in_from_ref = service_days.shift(to_node.days, shift_days)
+            to_days_in_from_ref = to_node.days.shift(shift_days)
 
             from_node_split = from_node.split(to_days_in_from_ref)
 
@@ -244,11 +142,7 @@ def backprop_split(graph, gtfs):
                 queue.append(from_node)
 
 
-
-
-
-
-def export_visit(graph):
+def export_visit(graph, services):
     stack = collections.deque(graph.sources)
     visited = set()
 
@@ -258,7 +152,7 @@ def export_visit(graph):
             continue
 
         visited.add(from_node)
-        print(from_node.trip_id, wdates(from_node.days))
+        print(from_node.trip_id, services.bdates(from_node.days))
         for to_node, transfer in from_node.out_edges.items():
-            print('\t->', to_node.trip_id, wdates(to_node.days))
+            print('\t->', to_node.trip_id, services.bdates(to_node.days))
             stack.append(to_node)

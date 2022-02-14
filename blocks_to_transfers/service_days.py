@@ -1,58 +1,105 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from blocks_to_transfers.editor.schema import CalendarDate, ExceptionType
 from blocks_to_transfers.editor.types import GTFSDate
 
-def shift(day_set, num_days):
-    if num_days == 0:
-        return set(day_set)
-    
-    return {day + timedelta(days=num_days) for day in day_set}
+class DaySet(int):
+    def __new__(cls, num):
+        return super().__new__(cls, num)
 
+    def intersection(a, b):
+        return DaySet(a & b)
+        
+    def union(a, b):
+        return DaySet(a | b)
+
+    def difference(a, b):
+        return DaySet(a & ~b)
+
+    def isdisjoint(a, b):
+        return a & b == 0
+
+    def issuperset(a, b):
+        return a & b == b
+
+    def isequal(a, b):
+        return a == b
+
+    def shift(day_set, num_days):
+        if num_days >= 0:
+            return DaySet(day_set << num_days)
+
+        return DaySet(day_set >> abs(num_days))
+
+    def __getitem__(self, day):
+        return self & (1 << day) != 0
+            
 class ServiceDays:
     def __init__(self, gtfs) -> None:
         print('Calculating days by service')
         self.gtfs = gtfs
         self.synth_service_counter = 0  # Number of services we needed to add to the feed
-        self.days_by_service = ServiceDays.get_days_by_service(gtfs)
+        self.init_days_by_service(gtfs)
         self.service_by_days = ServiceDays.get_reverse_index(self.days_by_service)
 
-    @staticmethod
-    def get_days_by_service(gtfs):
+    def init_days_by_service(self, gtfs):
         all_service_ids = gtfs.calendar.keys() | gtfs.calendar_dates.keys()
         days_by_service = {}
         weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+        # 1. Find a plausible starting point for the feed
+        start_day = datetime.max
+        end_day = datetime.min
+        for calendar in gtfs.calendar.values():
+            start_day = min(start_day, calendar.start_date)
+            end_day = max(end_day, calendar.end_date)
+
+        for dates in gtfs.calendar_dates.values():
+            for date in dates:
+                if date.exception_type == ExceptionType.REMOVE:
+                    continue
+                start_day = min(start_day, date.date)
+                end_day = max(end_day, date.date)
+
+        num_days = (end_day - start_day).days + 1
+
         for service_id in all_service_ids:
-            service_days = days_by_service[service_id] = set()
+            service_days = 0
             calendar = gtfs.calendar.get(service_id)
+
             if calendar:
                 num_days = (calendar.end_date - calendar.start_date).days + 1
                 current_day = calendar.start_date
-                for _ in range(num_days):
+                start_index = (current_day - start_day).days
+
+                for i in range(num_days):
                     weekday_name = weekdays[current_day.weekday()]
 
                     if calendar[weekday_name]:
-                        service_days.add(current_day)
+                        date_index = 1 << (start_index+i)
+                        service_days |= date_index
 
                     current_day += timedelta(days=1)
-
+            
             for date in gtfs.calendar_dates.get(service_id, []):
+                date_index = 1 << (date - start_day).days
                 if date.exception_type == ExceptionType.ADD:
-                    if date.date in service_days:
-                        print(f'Warning: calendar_dates.txt adds {date.date} to {service_id} even though it already runs on this date')
-                    service_days.add(date.date)
+                    service_days |= date_index
                 else:
-                    if date.date not in service_days:
-                        print(f'Warning: calendar_dates.txt removes {date.date} from {service_id} even though it already is not running on this date')
-                    service_days.discard(date.date)
-        return days_by_service
+                    service_days &= ~(date_index)
+
+            days_by_service[service_id] = DaySet(service_days)
+
+        self.days_by_service = days_by_service
+        self.epoch = start_day
+
 
     @staticmethod
     def get_reverse_index(days_by_service):
-        return {frozenset(days): service_id for service_id, days in days_by_service.items()}
+        return {days: service_id for service_id, days in days_by_service.items()}
 
     def days_by_trip(self, trip, extra_shift=0):
-        return shift(self.days_by_service[trip.service_id], trip.shift_days + extra_shift)
+        return self.days_by_service[trip.service_id].shift(trip.shift_days + extra_shift)
 
     def get_or_assign(self, days):
         """
@@ -75,7 +122,14 @@ class ServiceDays:
 
         return service_id
 
-# For debugging
+    # For debugging
+    def bdates(self, dates):
+        vdates = []
+        for i in range(dates.bit_length()):
+            if dates & (1 << i):
+                vdates.append(self.epoch + timedelta(days=i))
+        return wdates(vdates)
+
 
 def pdates(dates):
     sdates = sorted(date.strftime('%m%d') for date in dates)
@@ -90,3 +144,5 @@ def wdates(dates):
     sdates = ['UMTWRFS'[int(date.strftime('%w'))] for date in sdates]
     tdates =  ''.join(sdates[:14])
     return tdates
+
+

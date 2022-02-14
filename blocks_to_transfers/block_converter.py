@@ -4,7 +4,7 @@ an in-seat transfer, or simply a vehicle continuation for operational purposes.
 """
 from collections import namedtuple
 from . import config, shape_similarity
-from .service_days import shift
+from .service_days import DaySet
 from .editor.schema import TransferType, Transfer, DAY_SEC
 
 BlockConvertState = namedtuple('BlockConvertState', ('gtfs', 'services', 'shape_similarity_results'))
@@ -15,7 +15,7 @@ class TripConvertState:
         self.trip = trip
         self.shift_days = 0
         self.days_running = data.services.days_by_trip(trip)
-        self.days_matched = set()
+        self.days_matched = DaySet(0)
         self.has_conflicts = False
 
 def convert_blocks(gtfs, services):
@@ -138,7 +138,7 @@ def consider_transfer(data, trip_state, cont_trip):
 
 def match_transfer(data, trip_state, wait_time, cont_trip):
     # transfer found for every day trip operates on
-    if len(trip_state.days_running) == len(trip_state.days_matched):
+    if trip_state.days_running == trip_state.days_matched:
         raise StopIteration
 
     # Wait time too long even for operational purposes
@@ -148,29 +148,29 @@ def match_transfer(data, trip_state, wait_time, cont_trip):
     days_when_best = data.services.days_by_trip(cont_trip, -trip_state.shift_days) # From trip's frame of reference
 
     # Can only match on days originating trip is running
-    days_when_best.intersection_update(trip_state.days_running)
+    days_when_best = days_when_best.intersection(trip_state.days_running)
 
     if not days_when_best.isdisjoint(trip_state.days_matched):
         print(trip_state.trip.trip_id, cont_trip.trip_id, 'conflict')
         trip_state.has_conflicts = True
 
-    days_when_best.difference_update(trip_state.days_matched)
+    days_when_best = days_when_best.difference(trip_state.days_matched)
 
     # A: trip and cont_trip never run on the same day; or
     # B: There's no day cont_trip runs on that isn't served by an earlier trip
     if not days_when_best:
-        return set()
+        return DaySet(0)
 
     # We know that trip and cont_trip operate together on at least one day, and yet there's no way a single
     # vehicle can do this.
     if wait_time < 0:
         if config.TripToTripTransfers.force_allow_invalid_blocks:
-            return set()
+            return DaySet(0)
         else:
             raise InvalidBlockError(trip_state.trip, cont_trip)
 
-    trip_state.days_matched.update(days_when_best)
-    return shift(days_when_best, trip_state.shift_days)
+    trip_state.days_matched = trip_state.days_matched.union(days_when_best)
+    return days_when_best.shift(trip_state.shift_days)
 
 
 
