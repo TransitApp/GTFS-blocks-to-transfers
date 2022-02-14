@@ -4,7 +4,7 @@ from blocks_to_transfers.editor.schema import CalendarDate, ExceptionType
 from blocks_to_transfers.editor.types import GTFSDate
 
 class DaySet(int):
-    def __new__(cls, num):
+    def __new__(cls, num=0):
         return super().__new__(cls, num)
 
     def intersection(a, b):
@@ -33,6 +33,14 @@ class DaySet(int):
 
     def __getitem__(self, day):
         return self & (1 << day) != 0
+
+    def __len__(self):
+        return self.bit_length()
+
+    def __iter__(self):
+        for i in range(len(self)):
+            if self[i]:
+                yield i
             
 class ServiceDays:
     def __init__(self, gtfs) -> None:
@@ -82,7 +90,7 @@ class ServiceDays:
                     current_day += timedelta(days=1)
             
             for date in gtfs.calendar_dates.get(service_id, []):
-                date_index = 1 << (date - start_day).days
+                date_index = 1 << (date.date - start_day).days
                 if date.exception_type == ExceptionType.ADD:
                     service_days |= date_index
                 else:
@@ -101,12 +109,15 @@ class ServiceDays:
     def days_by_trip(self, trip, extra_shift=0):
         return self.days_by_service[trip.service_id].shift(trip.shift_days + extra_shift)
 
-    def get_or_assign(self, days):
+    def get_or_assign(self, trip, days):
         """
         Given a set of days of operation, obtain the existing service_id in the feed, or create a synthetic 
         object to represent it (using calendar_dates.txt.)
         """
-        days = frozenset(days)
+
+        # Restore original representation of trip's days if it started after midnight
+        days = days.shift(-trip.shift_days)
+
         service_id = self.service_by_days.get(days)
         if service_id:
             return service_id
@@ -114,21 +125,22 @@ class ServiceDays:
         service_id = f'b2t:service_{self.synth_service_counter}'
         self.synth_service_counter += 1
         self.service_by_days[days] = service_id
+
         self.gtfs.calendar_dates[service_id] = [CalendarDate(
             service_id=service_id,
-            date=GTFSDate(day),
+            date=GTFSDate(date),
             exception_type=ExceptionType.ADD
-        ) for day in days]
+        ) for date in self.to_dates(days)]
 
         return service_id
 
+    def to_dates(self, day_set):
+        for offset in day_set:
+            yield self.epoch + timedelta(days=offset)
+
     # For debugging
     def bdates(self, dates):
-        vdates = []
-        for i in range(dates.bit_length()):
-            if dates & (1 << i):
-                vdates.append(self.epoch + timedelta(days=i))
-        return wdates(vdates)
+        return wdates(self.to_dates(dates))
 
 
 def pdates(dates):

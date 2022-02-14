@@ -94,9 +94,10 @@ class Entity:
         return self.__dict__.get(key, default)
 
     def __repr__(self):
-        return f'{self.__class__.__name__} {repr(self.__dict__)}'
+        filtered_dict = {k: v for k, v in self.__dict__.items() if k not in {'_gtfs'}}
+        return f'{self.__class__.__name__} {repr(filtered_dict)}'
 
-    def duplicate(self, **overrides):
+    def clone(self, **overrides):
         merged = self.__dict__.copy()
         merged.update(overrides)
 

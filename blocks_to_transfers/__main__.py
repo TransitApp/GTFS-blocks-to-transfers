@@ -1,20 +1,14 @@
 import argparse
-from collections import namedtuple
 import os
-from blocks_to_transfers import cut
+from . import convert_blocks, editor, simplify_graph, service_days
 
-from blocks_to_transfers.service_days import ServiceDays
-from . import block_converter, editor
+
 def process(in_dir, out_dir):
     gtfs = editor.load(in_dir)
 
-    # Will be needed later to process existing trip-to-trip transfers
-    services = ServiceDays(gtfs)
-
-    converted_transfers = block_converter.convert_blocks(gtfs, services)
-    cut.convert(gtfs, services, converted_transfers)
-
-    #expand_dag.expand(data, trip_transfers)
+    services = service_days.ServiceDays(gtfs)
+    converted_transfers = convert_blocks.convert(gtfs, services)
+    simplify_graph.simplify(gtfs, services, converted_transfers)
 
     editor.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir)
     print('Done.')

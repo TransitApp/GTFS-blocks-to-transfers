@@ -7,8 +7,9 @@ from . import config, shape_similarity
 from .service_days import DaySet
 from .editor.schema import TransferType, Transfer, DAY_SEC
 
+
 BlockConvertState = namedtuple('BlockConvertState', ('gtfs', 'services', 'shape_similarity_results'))
-BlockConvertResult = namedtuple('BlockConvertResult', ('transfers', 'trip_ids_with_conflicts'))
+
 
 class TripConvertState:
     def __init__(self, data, trip) -> None:
@@ -17,8 +18,9 @@ class TripConvertState:
         self.days_running = data.services.days_by_trip(trip)
         self.days_matched = DaySet(0)
 
-def convert_blocks(gtfs, services):
-    trips_by_block = augment_trips(gtfs)
+
+def convert(gtfs, services):
+    trips_by_block = group_trips(gtfs)
 
     print('Predicting continuations')
     converted_transfers = []
@@ -33,7 +35,7 @@ def convert_blocks(gtfs, services):
     return converted_transfers
 
 
-def augment_trips(gtfs):
+def group_trips(gtfs):
     print('Grouping trips by block and merging shapes')
     unique_shapes = {}
     trips_by_block = {}
@@ -123,6 +125,7 @@ def consider_transfer(data, trip_state, cont_trip):
         transfer_type=classify_transfer(data, trip_state.trip, wait_time, cont_trip),
         from_trip_id=trip_state.trip.trip_id,
         to_trip_id=cont_trip.trip_id,
+        _gtfs=data.gtfs,
         _days_when_best=days_when_best,
         _partial_days=has_conflicts
     )
@@ -142,12 +145,9 @@ def match_transfer(data, trip_state, wait_time, cont_trip):
     # Can only match on days originating trip is running
     days_when_best = days_when_best.intersection(trip_state.days_running)
 
-    if not days_when_best.isdisjoint(trip_state.days_matched):
-        print(trip_state.trip.trip_id, cont_trip.trip_id, 'conflict')
-        has_conflicts = True
-    else:
-        has_conflicts = False
+    has_conflicts = not days_when_best.isdisjoint(trip_state.days_matched)
 
+    # Resolve conflicts by taking days left over by previous matches
     days_when_best = days_when_best.difference(trip_state.days_matched)
 
     # A: trip and cont_trip never run on the same day; or
@@ -192,8 +192,3 @@ def classify_transfer(data, trip, wait_time, cont_trip):
 
     # We presume that the rider will be able to stay onboard the vehicle
     return TransferType.IN_SEAT
-
-
-def add_transfers(gtfs, transfers):
-    for transfer in transfers:
-        gtfs.transfers.setdefault(transfer.from_trip_id, []).append(transfer)

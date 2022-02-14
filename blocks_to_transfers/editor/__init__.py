@@ -156,22 +156,22 @@ def serialize_field(value):
     return str(value) # Direct conversion to string
 
 
-def duplicate(entities, key, new_key):
+def clone(entities, key, new_key):
     if key not in entities:
         return
 
     entries = entities[key]
     if isinstance(entries, list):
-        entities[new_key] = [duplicate_1(entity, new_key) for entity in entries]
+        entities[new_key] = [clone_and_index(entity, new_key) for entity in entries]
     else:
-        entities[new_key] = duplicate_1(entries, new_key)
+        entities[new_key] = clone_and_index(entries, new_key)
 
     return entities[new_key]
 
 
-def duplicate_1(entity, new_key):
+def clone_and_index(entity, new_key):
     field_schema = entity.__class__._schema
-    new_entity = entity.duplicate()
+    new_entity = entity.clone()
     new_entity[field_schema.id] = new_key
     return new_entity
 
