@@ -1,6 +1,6 @@
 import argparse
 import os
-from . import convert_blocks, editor, simplify_graph, service_days
+from . import convert_blocks, editor, simplify_graph, service_days, classify_transfers
 
 
 def process(in_dir, out_dir):
@@ -8,6 +8,8 @@ def process(in_dir, out_dir):
 
     services = service_days.ServiceDays(gtfs)
     converted_transfers = convert_blocks.convert(gtfs, services)
+    classify_transfers.classify(gtfs, converted_transfers)
+
     simplify_graph.simplify(gtfs, services, converted_transfers)
 
     editor.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir)

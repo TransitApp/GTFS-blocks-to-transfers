@@ -264,8 +264,14 @@ def dfs_exp(graph):
 
 
 def import_provided_transfers(graph):
-    for transfers in graph.gtfs.transfers.values():
+    for from_trip_id, transfers in graph.gtfs.transfers.items():
+        if not from_trip_id:
+            continue # Stop or route related transfers
+
         for transfer in transfers:
+            if transfer.transfer_type not in {TransferType.IN_SEAT, TransferType.VEHICLE_CONTINUATION}:
+                continue # Trip-to-trip transfers on separate vehicles
+            
             if transfer.from_trip_id == transfer.to_trip_id:
                 print(f'WARNING: Removed self-transfer for trip {transfer.from_trip_id}')
                 continue

@@ -1,4 +1,5 @@
 from enum import IntEnum
+import math
 from .schema_classes import *
 from .types import *
 from ..shape_similarity import LatLon
@@ -75,6 +76,9 @@ class Trip(Entity):
 
     @saved_property
     def first_departure(self):
+        if self.trip_id not in self._gtfs.stop_times:
+            return -math.inf
+
         return self.first_stop_time.departure_time - DAY_SEC*self.shift_days
 
     @saved_property

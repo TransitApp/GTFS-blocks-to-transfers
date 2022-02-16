@@ -38,6 +38,3 @@ class InSeatTransfers:
     # The provided constants work best in urban areas, but are far from perfect even there.
     similarity_percentile = .8  # / 1.0
     similarity_distance = 500  # meters
-
-
-
