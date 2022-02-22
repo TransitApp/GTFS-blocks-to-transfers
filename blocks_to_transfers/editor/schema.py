@@ -123,6 +123,10 @@ class Transfer(Entity):
     to_trip_id: str = ''
     transfer_type: TransferType = TransferType.RECOMMENDED
 
+    @property
+    def is_continuation(self):
+        return self.transfer_type in {TransferType.IN_SEAT, TransferType.VEHICLE_CONTINUATION}
+
 
 class StopTime(Entity):
     _schema = File(id='trip_id', name='stop_times', required=True, group_id='stop_sequence')

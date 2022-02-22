@@ -4,12 +4,12 @@ red,trip_2,fri-sat-sun,red_loop
 red,trip_3,fri-sat,red_loop
 red,trip_4,mon-tues-wed-thurs,red_loop
 red,trip_5,mon-tues-wed-thurs,red_loop
-brown,vs_1,mon-tues-wed-thurs-fri-sat-sun,brown_loop
+brown,vs_1,fri-sat-sun,brown_loop
 brown,vs_2,fri-sat,brown_loop
-brown,vs_3,fri-sat-sun,brown_loop
-orange,ws_1,mon-tues-wed-thurs-fri-sat-sun,
-orange,ws_2,fri,
+brown,vs_3,mon-tues-wed-thurs-fri-sat-sun,brown_loop
+orange,ws_1,mon-wed,
+orange,ws_2,mon,
 blue,cycle_1,mon-tues-wed-thurs-fri-sat-sun,blue_loop
 blue,cycle_2,mon-tues-wed-thurs-fri-sat-sun,blue_loop
-blue,cycle_3,mon-tues-wed-thurs,blue_loop
+blue,cycle_3,mon-tues-wed-thurs-fri-sat-sun,blue_loop
 blue,cycle_4,mon-tues-wed-thurs-fri-sat-sun,blue_loop

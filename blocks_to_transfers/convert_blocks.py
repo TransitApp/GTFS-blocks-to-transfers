@@ -88,10 +88,11 @@ def convert_block(data, trips):
 
 
 class InvalidBlockError(ValueError):
-    def __init__(self, trip, cont_trip):
+    def __init__(self, trip, cont_trip, debug):
         super().__init__(self, 'Invalid block')
         self.trip = trip
         self.cont_trip = cont_trip
+        self.debug = debug
         
     def __str__(self):
         wait_time = self.cont_trip.first_departure - self.trip.last_arrival
@@ -101,7 +102,7 @@ class InvalidBlockError(ValueError):
         Warning: Block {block_id} is invalid:
                 {self.trip.first_departure} - {self.trip.last_arrival} [{self.trip.trip_id}]
                 {self.cont_trip.first_departure} - {self.cont_trip.last_arrival} [{self.cont_trip.trip_id}]
-                In two places at once for {abs(wait_time)} s.
+                In two places at once for {abs(wait_time)} s on days {self.debug}.
         '''
 
 
@@ -140,7 +141,8 @@ def consider_transfer(data, trip_state, cont_trip):
         if config.TripToTripTransfers.force_allow_invalid_blocks:
             return None
         else:
-            raise InvalidBlockError(trip_state.trip, cont_trip)
+            debug = data.services.bdates(days_when_best)
+            raise InvalidBlockError(trip_state.trip, cont_trip, debug)
 
     trip_state.days_matched = trip_state.days_matched.union(days_when_best)
 

@@ -124,7 +124,7 @@ def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
         shutil.copy2(original_filename, gtfs_out_dir / original_filename.name)
 
     for file_schema in GTFS_SUBSET_SCHEMA.values():
-        print(f'Exporting {file_schema.name}')
+        print(f'Writing {file_schema.name}')
         entities = gtfs.get(file_schema.name)
         if not entities:
             continue

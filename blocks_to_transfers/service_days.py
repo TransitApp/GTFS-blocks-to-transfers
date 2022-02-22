@@ -109,6 +109,15 @@ class ServiceDays:
     def days_by_trip(self, trip, extra_shift=0):
         return self.days_by_service[trip.service_id].shift(trip.shift_days + extra_shift)
 
+    def days_in_from_frame(self, from_trip, to_trip, days):
+        shift_days = -1 if to_trip.first_departure < from_trip.last_arrival else 0
+        return days.shift(shift_days)
+
+    def days_in_to_frame(self, from_trip, to_trip, days):
+        shift_days = 1 if to_trip.first_departure < from_trip.last_arrival else 0
+        return days.shift(shift_days)
+
+
     def get_or_assign(self, trip, days):
         """
         Given a set of days of operation, obtain the existing service_id in the feed, or create a synthetic 
