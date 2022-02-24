@@ -25,10 +25,10 @@ cycle_1,0,slocan_city,05:00:00,05:00:00
 cycle_1,1,junction,05:30:00,05:30:00
 cycle_2,0,junction,11:00:00,11:00:00
 cycle_2,1,slocan_city,11:30:00,11:30:00
-cycle_3,0,slocan_city,17:00:00,17:00:00
-cycle_3,1,junction,17:30:00,17:30:00
-cycle_4,0,junction,23:00:00,23:00:00
-cycle_4,1,slocan_city,23:30:00,23:30:00
+cycle_3,0,slocan_city,24:01:00,24:01:00
+cycle_3,1,junction,24:31:00,24:31:00
+cycle_4,0,junction,25:02:00,25:02:00
+cycle_4,1,slocan_city,25:32:00,25:32:00
 ws_1,0,slocan_city,07:55:00,07:55:00
 ws_1,1,slocan_park,08:20:00,08:20:00
 ws_2,0,slocan_park,08:26:00,08:26:00

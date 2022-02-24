@@ -150,6 +150,9 @@ class ServiceDays:
     # For debugging
     def bdates(self, dates):
         return wdates(self.to_dates(dates))
+    
+    def pdates(self, dates):
+        return pdates(list(self.to_dates(dates)))
 
 
 def pdates(dates):
