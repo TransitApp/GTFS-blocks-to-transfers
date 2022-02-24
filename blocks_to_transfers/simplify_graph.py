@@ -84,12 +84,11 @@ class Graph:
 Keep = object()
 ResidualTrip = object()
 
-class Node:
-    def __init__(self, trip, days, in_edges=None, out_edges=None):
-        self.trip = trip
-        self.days = days
-        self.in_edges = in_edges or {}
-        self.out_edges = out_edges or {}
+class BaseNode:
+    def __init__(self, days, in_edges, out_edges):
+        self.days = days if days else service_days.DaySet()
+        self.in_edges = in_edges 
+        self.out_edges = out_edges 
 
         for in_node, edge in self.in_edges.items():
             in_node.out_edges[self] = edge
@@ -97,12 +96,31 @@ class Node:
         for out_node, edge in self.out_edges.items():
             out_node.in_edges[self] = edge
 
+    def has_trip(self):
+        return False
+
+    @property
+    def trip_id(self):
+        return '<no trip>'
+
+
+class Node(BaseNode):
+    def __init__(self, trip, days, in_edges=None, out_edges=None):
+        in_edges = in_edges or {}
+        out_edges = out_edges or {}
+        super().__init__(days, in_edges, out_edges)
+
+        self.start_node = BaseNode(service_days.DaySet(), {}, {self: None})
+        self.term_node = BaseNode(service_days.DaySet(), {self: None}, {})
+        self.trip = trip
+
+    def has_trip(self):
+        return True
+
     @property
     def trip_id(self):
         return self.trip.trip_id
 
-    def __repr__(self) -> str:
-        return f'Node {self.trip_id} & {bin(self.days)[:-15:-1]}'
 
     def split(self, new_days):
         if new_days.issuperset(self.days):
@@ -119,15 +137,13 @@ def simplify(gtfs, services, generated_transfers):
    
     add_fake_data(gtfs, services, generated_transfers)
     import_generated_transfers(graph, generated_transfers)
-    apply_transfer_priority(graph)
+    split_ordered_alternatives(graph)
     delete_impossible_edges(graph, print_warnings=False)
     
     import_predefined_transfers(graph)
     delete_impossible_edges(graph, print_warnings=True)
     validate(graph)
     return graph
-    # standard_export (visit the graph in some random-ass order)
-    # compatible_export (DFS magic)
 
 
 def import_predefined_transfers(graph):
@@ -148,7 +164,7 @@ def import_generated_transfers(graph, generated_transfers):
         graph.make_primary_edge(transfer)
 
 
-def apply_transfer_priority(graph):
+def split_ordered_alternatives(graph):
     """
     The spec requires all from_trip_ids of a certain to_trip_id, and all to_trip_ids of a certain from_trip_id,
     to form 'disjoint cases' (either matching another case exactly, or disjoint of all cases.)
@@ -175,7 +191,7 @@ def apply_transfer_priority(graph):
         days_matched = service_days.DaySet()
 
         for to_node, transfer in list(from_node.out_edges.items()):
-            if not transfer.is_continuation:
+            if not transfer or not transfer.is_continuation:
                 continue
 
             to_days_in_frame = graph.services.days_in_from_frame(from_node.trip, to_node.trip, to_node.days)
@@ -201,7 +217,14 @@ def delete_impossible_edges(graph, print_warnings):
     """
 
     for from_node in graph.nodes:
+        if not from_node.has_trip():
+            continue
+
+
         for to_node, transfer in list(from_node.out_edges.items()):
+            if not to_node.has_trip(): # term_node is permanent 
+                continue
+
             if not transfer.is_continuation:
                 continue
 
@@ -235,7 +258,7 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
     distinct_cases = set()
 
     for neighbour, transfer in list(neighbours.items()):
-        if not transfer.is_continuation:
+        if not transfer or not transfer.is_continuation:
             continue # Regular transfers between trips that don't share vehicles; these criteria do not apply
 
         if edge_type is EdgeType.OUT:
@@ -267,13 +290,14 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
     residual_days = node.days.difference(union_cases)
     if residual_days:
         if edge_type is EdgeType.OUT:
-            residual_node = Node(ResidualTrip, residual_days, in_edges={node: None})
+            node.term_node.days = node.term_node.days.union(residual_days)
+            graph.adjust(node.term_node)
         else:
-            residual_node = Node(ResidualTrip, residual_days, out_edges={node: None})
+            node.start_node.days = node.start_node.days.union(residual_days)
+            graph.adjust(node.start_node)
 
         print(f'RES {node.trip_id} {edge_type} {" ".join(str(date) for date in graph.services.to_dates(residual_days))}')
         graph.adjust(node)
-        graph.adjust(residual_node)
 
 
  

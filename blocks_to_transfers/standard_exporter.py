@@ -27,17 +27,17 @@ def export_visit(graph):
             continue
 
         visited.add(from_node)
-        if from_node.trip is not simplify_graph.ResidualTrip:
+        if from_node.has_trip():
             from_trip_id = simplify_graph.make_trip(graph, from_node)
             transfers_out = transfers.setdefault(from_trip_id, [])
             #print('=>',from_trip_id)
 
         for to_node, transfer in from_node.out_edges.items():
-            if to_node.trip is not simplify_graph.ResidualTrip:
+            if to_node.has_trip():
                  to_trip_id = simplify_graph.make_trip(graph, to_node)
                  #print('>>',to_trip_id)
 
-            if from_node.trip is not simplify_graph.ResidualTrip and to_node.trip is not simplify_graph.ResidualTrip:            
+            if from_node.has_trip() and to_node.has_trip():          
                 split_transfer = transfer.clone(
                     from_trip_id=from_trip_id,
                     to_trip_id=to_trip_id

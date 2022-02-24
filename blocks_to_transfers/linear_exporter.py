@@ -20,18 +20,63 @@ class PathEntry:
 
 def ppath(cell):
     path = []
-    path.append('Residual' if cell.node.trip is simplify_graph.ResidualTrip else cell.node.trip_id)
+    path.append(cell.node.trip_id)
     while cell.parent:
         cell = cell.parent
-        path.insert(0, 'Residual' if cell.node.trip is simplify_graph.ResidualTrip else cell.node.trip_id)
+        path.insert(0, cell.node.trip_id)
 
     return path
 
-
-
 def export_visit(graph):
+    break_cycles(graph)
+    return find_paths(graph)
+
+def break_cycles(graph):
+    stack = collections.deque(graph.sources)
+    pred = {}
+
+    while stack:
+        from_node = stack.pop()
+
+        for to_node, transfer in list(from_node.out_edges.items()):
+            if not from_node.has_trip() or not to_node.has_trip():
+                shift_days = 0
+            else:
+                shift_days = -1 if to_node.trip.first_departure < from_node.trip.last_arrival else 0
+
+            match_days = from_node.days.intersection(to_node.days.shift(shift_days))
+
+            if on_path(pred, from_node, to_node):
+                print(f'Prohibited cycle {from_node.trip_id} -> {to_node.trip_id} [{graph.services.pdates(match_days)}]')
+                graph.del_edge(from_node, to_node) 
+                match_days_reshifted = match_days.shift(-shift_days)
+                from_node.term_node.days = from_node.term_node.days.union(match_days_reshifted)
+                to_node.start_node.days = to_node.start_node.days.union(match_days)
+                graph.adjust(from_node)
+                graph.adjust(to_node)
+                graph.adjust(from_node.term_node)
+                graph.adjust(to_node.start_node)
+                print(f'\tResolved {from_node.trip_id} -> {from_node.term_node.trip_id} [{graph.services.pdates(from_node.term_node.days)}]')
+                print(f'\tResolved {to_node.start_node.trip_id} -> {to_node.trip_id} [{graph.services.pdates(to_node.start_node.days)}]')
+                continue
+
+            pred[to_node] = from_node
+            stack.append(to_node)
+
+def on_path(pred, last, search_node):
+    current = last
+    while current:
+        if current is search_node:
+            return True
+
+        current = pred.get(current)
+
+    return False
+
+
+
+def find_paths(graph):
     """
-    LINEAR EXPORTER DOES NOT LIKE CYCLES
     LINEAR EXPORTER DOES NOT LIKE IT IF VEHCILES JOIN OR SPLIT
     DO NOT UPSET LINEAR EXPORTER
     """
@@ -43,29 +88,29 @@ def export_visit(graph):
         from_node = from_entry.node
 
         for to_node, transfer in from_node.out_edges.items():
-            if from_node.trip is simplify_graph.ResidualTrip or to_node.trip is simplify_graph.ResidualTrip:
+            if not from_node.has_trip() or not to_node.has_trip():
                 shift_days = 0
             else:
                 shift_days = -1 if to_node.trip.first_departure < from_node.trip.last_arrival else 0
 
             to_days_in_from_ref = to_node.days.shift(shift_days)
             match_days = from_entry.limit_days.intersection(to_days_in_from_ref)
-            # undo the shift on match days
-            match_days = match_days.shift(-shift_days)
 
-            if match_days:
-                if to_node.trip is simplify_graph.ResidualTrip:
-                    # ResidualTrip has no outgoing edges - it marks the end of a block along this path
-                    add_path_to_graph(transformed_graph, from_entry, match_days)
-                elif from_entry.has_node(to_node):
-                    # Would form a cycle - export the last edge to close the path; do not continue
-                    closing_entry = PathEntry(to_node, match_days, from_entry, transfer)
-                    add_path_to_graph(transformed_graph, closing_entry, match_days)
-                else:
-                    # A new edge continuing the block
-                    stack.append(PathEntry(to_node, match_days, from_entry, transfer))
+            if not match_days:
+                # from_node and to_node aren't in any way connected on match_days
+                continue
+
+            if not to_node.has_trip() or from_entry.has_node(to_node):
+                # End of block:
+                #   - discovered a Residual node, which indicates the end of a block for these days
+                #   - we're revisiting a node along the path (a cycle)
+                add_path_to_graph(transformed_graph, from_entry, match_days)
+            else:
+                # A new edge continuing the block
+                # Put match_days back in to_node's frame of reference
+                match_days = match_days.shift(-shift_days)
+                stack.append(PathEntry(to_node, match_days, from_entry, transfer))
                     
-
     return transformed_graph
 
 def add_path_to_graph(t_graph, last_entry, days):
@@ -78,7 +123,7 @@ def add_path_to_graph(t_graph, last_entry, days):
     while current_entry.parent:
         parent = current_entry.parent
 
-        if parent.node.trip is simplify_graph.ResidualTrip:
+        if not parent.node.has_trip():
             break
 
         shifted_days = t_graph.services.days_in_from_frame(parent.node.trip, last_entry.node.trip, days)
