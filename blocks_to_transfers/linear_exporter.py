@@ -1,12 +1,11 @@
 import collections
 from blocks_to_transfers import simplify_graph
 
-class PathEntry:
-    def __init__(self, node, limit_days, parent=None, via_transfer=None) -> None:
+class Step:
+    def __init__(self, node, limit_days, parent=None) -> None:
         self.node = node
         self.limit_days = limit_days
         self.parent = parent
-        self.via_transfer = via_transfer
 
     def has_node(self, target_node):
         current_entry = self
@@ -81,13 +80,13 @@ def find_paths(graph):
     DO NOT UPSET LINEAR EXPORTER
     """
     transformed_graph = simplify_graph.Graph(graph.gtfs, graph.services)
-    stack = collections.deque(PathEntry(node, node.days) for node in graph.sources)
+    stack = collections.deque(Step(node, node.days) for node in graph.sources)
 
     while stack:
         from_entry = stack.pop()
         from_node = from_entry.node
 
-        for to_node, transfer in from_node.out_edges.items():
+        for to_node in from_node.out_edges.keys():
             if not from_node.has_trip() or not to_node.has_trip():
                 shift_days = 0
             else:
@@ -109,7 +108,7 @@ def find_paths(graph):
                 # A new edge continuing the block
                 # Put match_days back in to_node's frame of reference
                 match_days = match_days.shift(-shift_days)
-                stack.append(PathEntry(to_node, match_days, from_entry, transfer))
+                stack.append(Step(to_node, match_days, from_entry))
                     
     return transformed_graph
 
@@ -127,7 +126,7 @@ def add_path_to_graph(t_graph, last_entry, days):
             break
 
         shifted_days = t_graph.services.days_in_from_frame(parent.node.trip, last_entry.node.trip, days)
-        parent_node = simplify_graph.Node(parent.node.trip, shifted_days, out_edges={prev_node: current_entry.via_transfer})
+        parent_node = simplify_graph.Node(parent.node.trip, shifted_days, out_edges={prev_node: parent.node.out_edges[current_entry.node]})
         t_graph.nodes.append(parent_node)
         t_graph.adjust(parent_node)
 
