@@ -16,28 +16,24 @@ class Graph:
         self.nodes = []
         self.primary_nodes = {}
 
-    def adjust(self, node):
-        if not node or node is Keep:
-            return 
 
-        if not node.in_edges:
-            # Isolated nodes are considered sources
-            self.sources.add(node)
-        elif not node.out_edges:
-            self.sinks.add(node)
-        else:
-            self.sources.discard(node)
-            self.sinks.discard(node)
+    def add(self, *args, **kwargs):
+        return self.add_node(Node(*args, **kwargs))
 
-    
+
+    def add_node(self, node):
+        self.nodes.append(node)
+        self.nodes.append(node.source_node)
+        self.nodes.append(node.sink_node)
+        return node
+
     def make_primary_node(self, trip_id):
         node = self.primary_nodes.get(trip_id)
         if node:
             return node
     
         trip = self.gtfs.trips[trip_id]
-        node = self.primary_nodes[trip_id] = Node(trip, self.services.days_by_trip(trip))
-        self.nodes.append(node)
+        node = self.primary_nodes[trip_id] = self.add(trip, self.services.days_by_trip(trip))
         return node
 
     def make_primary_edge(self, transfer):
@@ -45,16 +41,12 @@ class Graph:
         to_node = self.make_primary_node(transfer.to_trip_id)
         from_node.out_edges[to_node] = to_node.in_edges[from_node] = transfer
 
-        self.adjust(from_node)
-        self.adjust(to_node)
         return from_node, to_node
+
 
     def del_edge(self, from_node, to_node):
         del from_node.out_edges[to_node]
         del to_node.in_edges[from_node]
-
-        self.adjust(from_node)
-        self.adjust(to_node)
 
 
     def split(self, target_node, from_node, to_node, days):
@@ -72,17 +64,16 @@ class Graph:
         if node_split is Keep:
             return node_split
         
+
         self.del_edge(from_node, to_node)
-        self.adjust(node_split)
 
         if node_split:
-            self.nodes.append(node_split)
+            self.add_node(node_split)
 
         return node_split
 
 
 Keep = object()
-ResidualTrip = object()
 
 class BaseNode:
     def __init__(self, days, in_edges, out_edges):
@@ -110,12 +101,14 @@ class Node(BaseNode):
         out_edges = out_edges or {}
         super().__init__(days, in_edges, out_edges)
 
-        self.start_node = BaseNode(service_days.DaySet(), {}, {self: None})
-        self.term_node = BaseNode(service_days.DaySet(), {self: None}, {})
+        self.source_node = BaseNode(service_days.DaySet(), {}, {self: None})
+        self.sink_node = BaseNode(service_days.DaySet(), {self: None}, {})
         self.trip = trip
+
 
     def has_trip(self):
         return True
+
 
     @property
     def trip_id(self):
@@ -131,6 +124,7 @@ class Node(BaseNode):
         new_days = new_days.intersection(self.days)
         self.days = self.days.difference(new_days)
         return Node(self.trip, new_days, self.in_edges.copy(), self.out_edges.copy())
+
 
 def simplify(gtfs, services, generated_transfers):
     graph = Graph(gtfs, services)
@@ -222,7 +216,7 @@ def delete_impossible_edges(graph, print_warnings):
 
 
         for to_node, transfer in list(from_node.out_edges.items()):
-            if not to_node.has_trip(): # term_node is permanent 
+            if not to_node.has_trip(): # sink_node is permanent 
                 continue
 
             if not transfer.is_continuation:
@@ -243,12 +237,19 @@ class EdgeType(enum.Enum):
 
 def validate(graph):
     """
-    The spec requires all from_trip_ids of a certain to_trip_id, and all to_trip_ids of a certain from_trip_id,
-    to form 'disjoint cases' (either matching another case exactly, or disjoint of all cases.)
+    The spec requires all from_trip_ids of a certain to_trip_id, and all 
+    to_trip_ids of a certain from_trip_id, to form 'disjoint cases' (either 
+    matching another case exactly, or disjoint of all cases.) This step deletes
+    non-conformant edges.
 
-    This step simply deletes any non-conformant edges.
+    For any node, if there is no out-edge continuation on a certain day, it is 
+    associated with the imaginary 'start node'. Similarily, if there are no
+    in-edges for a certain day, it will be associated with the 'terminal node'.
     """
     for node in graph.nodes:
+        if not node.has_trip():
+            continue
+
         validate_distinct_cases(graph, EdgeType.IN, node, node.in_edges)
         validate_distinct_cases(graph, EdgeType.OUT, node, node.out_edges)
 
@@ -258,7 +259,7 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
     distinct_cases = set()
 
     for neighbour, transfer in list(neighbours.items()):
-        if not transfer or not transfer.is_continuation:
+        if not neighbour.has_trip() or not transfer.is_continuation:
             continue # Regular transfers between trips that don't share vehicles; these criteria do not apply
 
         if edge_type is EdgeType.OUT:
@@ -290,15 +291,11 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
     residual_days = node.days.difference(union_cases)
     if residual_days:
         if edge_type is EdgeType.OUT:
-            node.term_node.days = node.term_node.days.union(residual_days)
-            graph.adjust(node.term_node)
+            node.sink_node.days = node.sink_node.days.union(residual_days)
+            graph.sinks.add(node.sink_node)
         else:
-            node.start_node.days = node.start_node.days.union(residual_days)
-            graph.adjust(node.start_node)
-
-        print(f'RES {node.trip_id} {edge_type} {" ".join(str(date) for date in graph.services.to_dates(residual_days))}')
-        graph.adjust(node)
-
+            node.source_node.days = node.source_node.days.union(residual_days)
+            graph.sources.add(node.source_node)
 
  
 def add_fake_data(gtfs, services, generated_transfers):
