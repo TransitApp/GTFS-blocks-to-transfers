@@ -1,5 +1,5 @@
 import collections
-from . import simplify_graph
+from . import simplify_graph, editor
 
 
 def export_visit(graph):
@@ -28,24 +28,37 @@ def export_visit(graph):
 
         visited.add(from_node)
         if from_node.has_trip():
-            from_trip_id = simplify_graph.make_trip(graph, from_node)
+            from_trip_id = make_trip(graph, from_node)
             transfers_out = transfers.setdefault(from_trip_id, [])
-            #print('=>',from_trip_id)
 
         for to_node, transfer in from_node.out_edges.items():
             if to_node.has_trip():
-                 to_trip_id = simplify_graph.make_trip(graph, to_node)
-                 #print('>>',to_trip_id)
+                 to_trip_id = make_trip(graph, to_node)
 
             if from_node.has_trip() and to_node.has_trip():          
                 split_transfer = transfer.clone(
                     from_trip_id=from_trip_id,
                     to_trip_id=to_trip_id
                 )
-
-                #print(f'{split_transfer.from_trip_id},{split_transfer.to_trip_id},{split_transfer.transfer_type}')
                 transfers_out.append(split_transfer)
+
             stack.append(to_node)
 
     graph.gtfs.transfers = transfers
 
+
+def make_trip(graph, node):
+    service_id = graph.services.get_or_assign(node.trip, node.days)
+
+    if node.trip.service_id == service_id:
+        # If the service_id did not change, avoid cloning the trip to minimize diffs
+        return node.trip_id
+
+    # Other trips are named according to a standard form
+    split_trip_id = f'{node.trip_id}_b2t:if_{service_id}'
+    if split_trip_id not in graph.gtfs.trips:
+        editor.clone(graph.gtfs.trips, node.trip_id, split_trip_id)
+        editor.clone(graph.gtfs.stop_times, node.trip_id, split_trip_id)
+        graph.gtfs.trips[split_trip_id].service_id = service_id
+
+    return split_trip_id

@@ -1,6 +1,6 @@
 import argparse
 import os
-from . import convert_blocks, editor, service_days, classify_transfers, simplify_graph, standard_exporter, linear_exporter
+from . import convert_blocks, editor, service_days, classify_transfers, simplify_graph, simplify_linear, simplify_export
 
 
 def process(in_dir, out_dir):
@@ -11,8 +11,8 @@ def process(in_dir, out_dir):
     classify_transfers.classify(gtfs, converted_transfers)
 
     graph = simplify_graph.simplify(gtfs, services, converted_transfers)
-    qgraph = linear_exporter.export_visit(graph)
-    standard_exporter.export_visit(qgraph)
+    qgraph = simplify_linear.simplify(graph)
+    simplify_export.export_visit(qgraph)
 
     editor.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir)
     print('Done.')

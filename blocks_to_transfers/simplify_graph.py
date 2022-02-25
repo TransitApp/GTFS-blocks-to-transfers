@@ -5,7 +5,7 @@ between trips, verify conditions and transform the representation.
 import collections
 import enum
 from .editor.schema import Transfer, TransferType
-from . import service_days, editor
+from . import service_days
 
 class Graph:
     def __init__(self, gtfs, services):
@@ -321,19 +321,3 @@ def add_fake_data(gtfs, services, generated_transfers):
             .difference(services.days_by_trip(gtfs.trips['ws_2']))
             .intersection(services.days_by_trip(gtfs.trips['ws_1'])))
     ))
-
-def make_trip(graph, node):
-    service_id = graph.services.get_or_assign(node.trip, node.days)
-
-    if node.trip.service_id == service_id:
-        # If the service_id did not change, avoid cloning the trip to minimize diffs
-        return node.trip_id
-
-    # Other trips are named according to a standard form
-    split_trip_id = f'{node.trip_id}_b2t:if_{service_id}'
-    if split_trip_id not in graph.gtfs.trips:
-        editor.clone(graph.gtfs.trips, node.trip_id, split_trip_id)
-        editor.clone(graph.gtfs.stop_times, node.trip_id, split_trip_id)
-        graph.gtfs.trips[split_trip_id].service_id = service_id
-
-    return split_trip_id
