@@ -7,7 +7,6 @@ def simplify(graph):
     return find_paths(graph)
 
 
-
 def break_cycles(graph):
     """
     Break cyclic blocks by removing back edges that cause the trips to 
@@ -33,13 +32,11 @@ def break_cycles(graph):
         if state.get(from_node) == Visited.ENTER:
             # All children of this node are now visited
             state[from_node] = Visited.EXIT
-            #print(f'{from_node.trip_id} {state[from_node]}')
             stack.pop()
             continue
 
         # Unvisited node has been entered
         state[from_node] = Visited.ENTER
-        #print(f'{from_node.trip_id} {state[from_node]}')
 
         for to_node in list(from_node.out_edges.keys()):
             shift_days = get_shift(from_node, to_node)
@@ -78,23 +75,17 @@ class Frame:
     def __getattr__(self, key):
         return getattr(self.node, key)
 
-def find_paths(graph):
-    """
-    DO NOT UPSET LINEAR EXPORTER
-    """
 
+def find_paths(graph):
     transformed_graph = simplify_graph.Graph(graph.gtfs, graph.services)
     stack = collections.deque(Frame(source) for source in graph.sources)
     
-    ####
     for node in graph.nodes:
-        if node.vehicle_split or node.vehicle_join:
+        if node.composite:
             stack.append(Frame(node))
-    ####
 
     while stack:
         from_node = stack.pop()
-        print(from_node.trip_id)
         for to_node in from_node.out_edges.keys():
             shift_days = get_shift(from_node, to_node)
             to_days_in_from_ref = to_node.days.shift(shift_days)
@@ -116,7 +107,7 @@ def find_paths(graph):
             # FIXME: What happens if the very first trip of the year requires shifting back?
             to_frame = Frame(to_node, parent=from_node, days=match_days)
 
-            if to_node.vehicle_join or to_node.vehicle_split:
+            if to_node.composite:
                 # Acts like it were a sink node and ends the block
                 add_path_to_graph(transformed_graph, last_frame=to_frame, days=match_days)
                 continue
@@ -124,6 +115,7 @@ def find_paths(graph):
             stack.append(to_frame)
                     
     return transformed_graph
+
 
 def add_path_to_graph(t_graph, last_frame, days):
     protected_nodes = {}
@@ -143,26 +135,23 @@ def add_path_to_graph(t_graph, last_frame, days):
         parent_days = t_graph.services.days_in_from_frame(parent_frame.trip, last_frame.trip, days)
         transfer = parent_frame.out_edges[current_frame.node]
         parent_split_node = get_path_node(t_graph, protected_nodes, parent_frame, parent_days)
-        parent_split_node.out_edges[split_node] = transfer
-        split_node.in_edges[parent_split_node] = transfer
+        t_graph.add_edge(parent_split_node, split_node, transfer)
         split_node = parent_split_node
         current_frame = parent_frame
 
 
 def get_path_node(t_graph, protected_nodes, frame, requested_days):
-    if frame.node.vehicle_split or frame.node.vehicle_join:
-        protected_node = protected_nodes.get(frame.node)
-        if protected_node:
-            print(f'Protected node {frame.trip_id} [{t_graph.services.bdates(frame.node.days)}] cannot be split')
-            return protected_node
-
-        protected_node = protected_nodes[frame.node] = simplify_graph.Node(frame.node.trip, frame.node.days)
-        t_graph.add_node(protected_node)
-
-        print(f'Protected node {frame.trip_id} [{t_graph.services.bdates(frame.node.days)}] cannot be split')
-        return protected_node
-    else:
+    if not frame.composite:
         return t_graph.add(frame.trip, requested_days)
+
+    protected_node = protected_nodes.get(frame.node)
+    if protected_node:
+        return protected_node
+
+    protected_node = protected_nodes[frame.node] = simplify_graph.Node(frame.node.trip, frame.node.days)
+    t_graph.add_node(protected_node)
+
+    return protected_node
 
 
 

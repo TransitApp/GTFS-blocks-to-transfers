@@ -11,8 +11,8 @@ class TripConvertState:
     def __init__(self, data, trip) -> None:
         self.trip = trip
         self.shift_days = 0
-        self.days_running = data.services.days_by_trip(trip)
-        self.days_matched = service_days.DaySet(0)
+        self.days_to_match = data.services.days_by_trip(trip)
+        self.num_matches = 0
 
 
 def convert(gtfs, services):
@@ -123,22 +123,17 @@ def consider_transfer(data, trip_state, cont_trip):
         wait_time += DAY_SEC
 
     # transfer found for every day trip operates on
-    if trip_state.days_running == trip_state.days_matched:
+    if not trip_state.days_to_match:
         raise StopIteration
 
     # Wait time too long even for operational purposes
     if wait_time > config.TripToTripTransfers.max_wait_time:
         raise StopIteration
 
-    days_when_best = data.services.days_by_trip(cont_trip, -trip_state.shift_days) # From trip's frame of reference
+    cont_days_in_from_frame = data.services.days_by_trip(cont_trip, -trip_state.shift_days) # From trip's frame of reference
 
     # Can only match on days originating trip is running
-    days_when_best = days_when_best.intersection(trip_state.days_running)
-
-    has_conflicts = not days_when_best.isdisjoint(trip_state.days_matched)
-
-    # Resolve conflicts by taking days left over by previous matches
-    days_when_best = days_when_best.difference(trip_state.days_matched)
+    days_when_best = cont_days_in_from_frame.intersection(trip_state.days_to_match)
 
     # A: trip and cont_trip never run on the same day; or
     # B: There's no day cont_trip runs on that isn't served by an earlier trip
@@ -154,12 +149,11 @@ def consider_transfer(data, trip_state, cont_trip):
             debug = data.services.bdates(days_when_best)
             raise InvalidBlockError(trip_state.trip, cont_trip, debug)
 
-    trip_state.days_matched = trip_state.days_matched.union(days_when_best)
+    trip_state.days_to_match = trip_state.days_to_match.difference(days_when_best)
+    trip_state.num_matches += 1
 
     return Transfer(
         from_trip_id=trip_state.trip.trip_id,
         to_trip_id=cont_trip.trip_id,
-        _gtfs=data.gtfs,
-        _days_when_best=days_when_best,
-        _partial_days=has_conflicts
+        _rank = trip_state.num_matches
     )

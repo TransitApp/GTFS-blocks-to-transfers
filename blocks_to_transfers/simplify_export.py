@@ -106,7 +106,6 @@ def delete_fully_split_trips(gtfs, trip_id_splits):
         if trip_id in trip_id_splits[trip_id]:
             continue
 
-        print(f'Deleted fully-split trip {trip_id}')
         del gtfs.trips[trip_id]
         del gtfs.stop_times[trip_id]
 

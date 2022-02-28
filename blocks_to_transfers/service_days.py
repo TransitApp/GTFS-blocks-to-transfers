@@ -101,7 +101,6 @@ class ServiceDays:
         self.days_by_service = days_by_service
         self.epoch = start_day
 
-
     @staticmethod
     def get_reverse_index(days_by_service):
         return {days: service_id for service_id, days in days_by_service.items()}
@@ -109,14 +108,18 @@ class ServiceDays:
     def days_by_trip(self, trip, extra_shift=0):
         return self.days_by_service[trip.service_id].shift(trip.shift_days + extra_shift)
 
+    @staticmethod
+    def get_shift(from_trip, to_trip):
+        if from_trip is None or to_trip is None:
+            return 0
+
+        return -1 if to_trip.first_departure < from_trip.last_arrival else 0
+
     def days_in_from_frame(self, from_trip, to_trip, days):
-        shift_days = -1 if to_trip.first_departure < from_trip.last_arrival else 0
-        return days.shift(shift_days)
+        return days.shift(ServiceDays.get_shift(from_trip, to_trip))
 
     def days_in_to_frame(self, from_trip, to_trip, days):
-        shift_days = 1 if to_trip.first_departure < from_trip.last_arrival else 0
-        return days.shift(shift_days)
-
+        return days.shift(-ServiceDays.get_shift(from_trip, to_trip))
 
     def get_or_assign(self, trip, days):
         """
@@ -147,7 +150,6 @@ class ServiceDays:
         for offset in day_set:
             yield self.epoch + timedelta(days=offset)
 
-    # For debugging
     def bdates(self, dates):
         return wdates(self.to_dates(dates))
     
