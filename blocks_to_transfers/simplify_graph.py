@@ -80,6 +80,8 @@ class BaseNode:
         self.days = days if days else service_days.DaySet()
         self.in_edges = in_edges 
         self.out_edges = out_edges 
+        self.vehicle_join = False
+        self.vehicle_split = False
 
         for in_node, edge in self.in_edges.items():
             in_node.out_edges[self] = edge
@@ -104,6 +106,7 @@ class Node(BaseNode):
         self.source_node = BaseNode(service_days.DaySet(), {}, {self: None})
         self.sink_node = BaseNode(service_days.DaySet(), {self: None}, {})
         self.trip = trip
+    
 
 
     def has_trip(self):
@@ -250,13 +253,19 @@ def validate(graph):
         if not node.has_trip():
             continue
 
-        validate_distinct_cases(graph, EdgeType.IN, node, node.in_edges)
-        validate_distinct_cases(graph, EdgeType.OUT, node, node.out_edges)
+        has_joining = validate_distinct_cases(graph, EdgeType.IN, node, node.in_edges)
+        if has_joining:
+            node.vehicle_join = True
+
+        has_splitting = validate_distinct_cases(graph, EdgeType.OUT, node, node.out_edges)
+        if has_splitting:
+            node.vehicle_split = False
 
 
 def validate_distinct_cases(graph, edge_type, node, neighbours):
     union_cases = service_days.DaySet()
     distinct_cases = set()
+    has_join_split = False
 
     for neighbour, transfer in list(neighbours.items()):
         if not neighbour.has_trip() or not transfer.is_continuation:
@@ -268,6 +277,7 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
             match_days = graph.services.days_in_to_frame(neighbour.trip, node.trip, neighbour.days)
 
         if match_days in distinct_cases:
+            has_join_split = True
             continue 
 
         if match_days.isdisjoint(union_cases):
@@ -296,6 +306,9 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
         else:
             node.source_node.days = node.source_node.days.union(residual_days)
             graph.sources.add(node.source_node)
+
+    return has_join_split
+
 
  
 def add_fake_data(gtfs, services, generated_transfers):

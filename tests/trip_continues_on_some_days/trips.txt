@@ -13,3 +13,9 @@ blue,cycle_1,mon-tues-wed-thurs-fri-sat-sun,blue_loop
 blue,cycle_2,mon-tues-wed-thurs-fri-sat-sun,blue_loop
 blue,cycle_3,mon-tues-wed-thurs-fri-sat-sun,blue_loop
 blue,cycle_4,mon-tues-wed-thurs-fri-sat-sun,blue_loop
+red,multi_0,fri-sat-sun,
+red,multi_1,mon-tues-wed-thurs-fri-sat-sun,
+red,multi_2F,fri-sat-sun,
+red,multi_2B,fri-sat-sun,
+red,multi_3,fri-sat,
+red,multi_5,mon-tues-wed-thurs,
