@@ -23,6 +23,9 @@ def convert(gtfs, services):
     data = BlockConvertState(gtfs, services, {})
 
     for trips in trips_by_block.values():
+        if not may_convert_trips(gtfs, trips):
+            continue
+
         try:
             converted_transfers.extend(convert_block(data, trips))
         except InvalidBlockError as exc:
@@ -51,15 +54,26 @@ def group_trips(gtfs):
     return trips_by_block
 
 
+def may_convert_trips(gtfs, trips):
+    if config.TripToTripTransfers.overwrite_existing:
+        return True
+
+    for trip in trips:
+        transfers_out = gtfs.transfers.get(trip.trip_id)
+        if not transfers_out:
+            continue
+
+        for transfer in transfers_out:
+            if transfer.is_continuation:
+                return False
+
+    return True
+
+
 def convert_block(data, trips):
     converted_transfers = []
 
     for i_trip, trip in enumerate(trips):
-        if not config.TripToTripTransfers.overwrite_existing and trip.trip_id in data.gtfs.transfers:
-            # If we find any manually set transfers in this block, discard all our calculations
-            # and leave in place the producer-defined transfers
-            return []
-
         trip_state = TripConvertState(data, trip)
 
         try:
@@ -76,13 +90,9 @@ def convert_block(data, trips):
                 transfer_opt = consider_transfer(data, trip_state, cont_trip)
                 if transfer_opt:
                     converted_transfers.append(transfer_opt)
-
         except StopIteration:
             # Will be raised once we know that there's no further trips to consider for transfers
             pass
-
-        # If days_to_match is not empty, it results in an additional case where trip has no continuation on certain days
-        # of service. We don't need to export this 'transfer' to transfers.txt but it must be taken into account.
 
     return converted_transfers
 

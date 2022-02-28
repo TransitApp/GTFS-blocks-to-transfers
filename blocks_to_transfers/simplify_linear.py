@@ -80,13 +80,12 @@ class Frame:
 
 def find_paths(graph):
     """
-    LINEAR EXPORTER DOES NOT LIKE IT IF VEHCILES JOIN OR SPLIT
     DO NOT UPSET LINEAR EXPORTER
     """
 
     transformed_graph = simplify_graph.Graph(graph.gtfs, graph.services)
     stack = collections.deque(Frame(source) for source in graph.sources)
-
+    
     ####
     for node in graph.nodes:
         if node.vehicle_split or node.vehicle_join:
@@ -95,7 +94,7 @@ def find_paths(graph):
 
     while stack:
         from_node = stack.pop()
-
+        print(from_node.trip_id)
         for to_node in from_node.out_edges.keys():
             shift_days = get_shift(from_node, to_node)
             to_days_in_from_ref = to_node.days.shift(shift_days)
@@ -146,6 +145,7 @@ def add_path_to_graph(t_graph, last_frame, days):
         parent_split_node = get_path_node(t_graph, protected_nodes, parent_frame, parent_days)
         parent_split_node.out_edges[split_node] = transfer
         split_node.in_edges[parent_split_node] = transfer
+        split_node = parent_split_node
         current_frame = parent_frame
 
 

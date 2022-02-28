@@ -106,17 +106,13 @@ class Node(BaseNode):
         self.source_node = BaseNode(service_days.DaySet(), {}, {self: None})
         self.sink_node = BaseNode(service_days.DaySet(), {self: None}, {})
         self.trip = trip
-    
-
 
     def has_trip(self):
         return True
 
-
     @property
     def trip_id(self):
         return self.trip.trip_id
-
 
     def split(self, new_days):
         if new_days.issuperset(self.days):
@@ -153,6 +149,12 @@ def import_predefined_transfers(graph):
                 print(f'WARNING: Removed self-transfer for trip {transfer.from_trip_id}')
                 continue
             
+            if not transfer.is_continuation:
+                # Provides walk time between two trips using separate vehicles.
+                # Not subject to splitting.
+                print('Ignore', transfer)
+                continue 
+
             graph.make_primary_edge(transfer)
 
 
@@ -184,12 +186,16 @@ def split_ordered_alternatives(graph):
             continue
 
         visited.add(from_node)
+
+        if not from_node.has_trip():
+            continue # Source node
+
         days_running = from_node.days
         days_matched = service_days.DaySet()
 
         for to_node, transfer in list(from_node.out_edges.items()):
-            if not transfer or not transfer.is_continuation:
-                continue
+            if not to_node.has_trip():
+                continue # Sink node
 
             to_days_in_frame = graph.services.days_in_from_frame(from_node.trip, to_node.trip, to_node.days)
             days_when_best = to_days_in_frame.intersection(days_running)
@@ -217,12 +223,8 @@ def delete_impossible_edges(graph, print_warnings):
         if not from_node.has_trip():
             continue
 
-
         for to_node, transfer in list(from_node.out_edges.items()):
             if not to_node.has_trip(): # sink_node is permanent 
-                continue
-
-            if not transfer.is_continuation:
                 continue
 
             to_node_days = graph.services.days_in_from_frame(from_node.trip, to_node.trip, to_node.days)
@@ -268,8 +270,8 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
     has_join_split = False
 
     for neighbour, transfer in list(neighbours.items()):
-        if not neighbour.has_trip() or not transfer.is_continuation:
-            continue # Regular transfers between trips that don't share vehicles; these criteria do not apply
+        if not neighbour.has_trip():
+            continue # Source or sink node
 
         if edge_type is EdgeType.OUT:
             match_days = graph.services.days_in_from_frame(node.trip, neighbour.trip, neighbour.days)
@@ -301,9 +303,11 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
     residual_days = node.days.difference(union_cases)
     if residual_days:
         if edge_type is EdgeType.OUT:
+            print(f'Rezidizle {node.trip_id}')
             node.sink_node.days = node.sink_node.days.union(residual_days)
             graph.sinks.add(node.sink_node)
         else:
+            print(f'Rezidizle {node.trip_id}')
             node.source_node.days = node.source_node.days.union(residual_days)
             graph.sources.add(node.source_node)
 
