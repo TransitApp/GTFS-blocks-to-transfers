@@ -259,7 +259,7 @@ def validate(graph):
 
         has_splitting = validate_distinct_cases(graph, EdgeType.OUT, node, node.out_edges)
         if has_splitting:
-            node.vehicle_split = False
+            node.vehicle_split = True
 
 
 def validate_distinct_cases(graph, edge_type, node, neighbours):
@@ -308,7 +308,6 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
             graph.sources.add(node.source_node)
 
     return has_join_split
-
 
  
 def add_fake_data(gtfs, services, generated_transfers):

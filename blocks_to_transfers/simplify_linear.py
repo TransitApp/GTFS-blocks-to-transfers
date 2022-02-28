@@ -87,11 +87,14 @@ def find_paths(graph):
     transformed_graph = simplify_graph.Graph(graph.gtfs, graph.services)
     stack = collections.deque(Frame(source) for source in graph.sources)
 
+    ####
+    for node in graph.nodes:
+        if node.vehicle_split or node.vehicle_join:
+            stack.append(Frame(node))
+    ####
+
     while stack:
         from_node = stack.pop()
-
-        if from_node.vehicle_join or from_node.vehicle_split:
-            print(f'YIKES! {from_node.trip_id}')
 
         for to_node in from_node.out_edges.keys():
             shift_days = get_shift(from_node, to_node)
@@ -112,18 +115,26 @@ def find_paths(graph):
             match_days = match_days.shift(-shift_days)
 
             # FIXME: What happens if the very first trip of the year requires shifting back?
-            stack.append(Frame(to_node, parent=from_node, days=match_days))
+            to_frame = Frame(to_node, parent=from_node, days=match_days)
+
+            if to_node.vehicle_join or to_node.vehicle_split:
+                # Acts like it were a sink node and ends the block
+                add_path_to_graph(transformed_graph, last_frame=to_frame, days=match_days)
+                continue
+
+            stack.append(to_frame)
                     
     return transformed_graph
 
 def add_path_to_graph(t_graph, last_frame, days):
+    protected_nodes = {}
     current_frame = last_frame
-    split_node = t_graph.add(current_frame.trip, days)
+    split_node = get_path_node(t_graph, protected_nodes, current_frame, days)
 
     while True:
         parent_frame = current_frame.parent
 
-        if not parent_frame.has_trip():
+        if not parent_frame or not parent_frame.has_trip():
             # Reached the end of the path
             # Even though export will work anyway, injecting a source node can improve the readability of transfers.txt
             split_node.source_node.days = days
@@ -131,8 +142,28 @@ def add_path_to_graph(t_graph, last_frame, days):
             break
 
         parent_days = t_graph.services.days_in_from_frame(parent_frame.trip, last_frame.trip, days)
-        split_node = t_graph.add(parent_frame.trip, parent_days, out_edges={split_node: parent_frame.out_edges[current_frame.node]})
+        transfer = parent_frame.out_edges[current_frame.node]
+        parent_split_node = get_path_node(t_graph, protected_nodes, parent_frame, parent_days)
+        parent_split_node.out_edges[split_node] = transfer
+        split_node.in_edges[parent_split_node] = transfer
         current_frame = parent_frame
+
+
+def get_path_node(t_graph, protected_nodes, frame, requested_days):
+    if frame.node.vehicle_split or frame.node.vehicle_join:
+        protected_node = protected_nodes.get(frame.node)
+        if protected_node:
+            print(f'Protected node {frame.trip_id} [{t_graph.services.bdates(frame.node.days)}] cannot be split')
+            return protected_node
+
+        protected_node = protected_nodes[frame.node] = simplify_graph.Node(frame.node.trip, frame.node.days)
+        t_graph.add_node(protected_node)
+
+        print(f'Protected node {frame.trip_id} [{t_graph.services.bdates(frame.node.days)}] cannot be split')
+        return protected_node
+    else:
+        return t_graph.add(frame.trip, requested_days)
+
 
 
 def get_shift(from_node, to_node):
