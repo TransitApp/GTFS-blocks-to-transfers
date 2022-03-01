@@ -26,7 +26,7 @@ def main():
     cmd = argparse.ArgumentParser(description='Predicts trip-to-trip transfers from block_ids in GTFS feeds')
     cmd.add_argument('feed', help='Path to a GTFS feed')
     cmd.add_argument('out_dir', help='Directory to contain the modified feed')
-    cmd.add_argument('-L','--linear', help='Apply linear simplification')
+    cmd.add_argument('-L','--linear', action='store_true', help='Apply linear simplification')
     args = cmd.parse_args()
 
     if os.environ.get('VSCODE_DEBUG'):

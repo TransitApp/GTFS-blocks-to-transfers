@@ -36,3 +36,4 @@ You can adjust thresholds or entirely disable a heuristic in [`blocks_to_transfe
 
 * `simplify_linear.py`: You probably don't want to enable this option, unless your system happens to have the same constraints described in this section. If enabled, trips will be split so that each trip has at most one incoming continuation, and at most one outgoing continuation. Where cycles exist (e.g. an automated people mover that serves trip 1 -> trip 2 -> trip 1 every day until the end of the feed), back edges are removed. Trips that decouple into multiple vehicles, or that are formed through the coupling of multiple vehicles are preserved as is. 
 * Test cases can be found in the `tests/` directory.
+* This program will run much faster using [PyPy](https://www.pypy.org), a jitted interpreter for Python.

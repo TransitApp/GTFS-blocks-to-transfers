@@ -12,7 +12,6 @@ def simplify(gtfs, services, generated_transfers):
     graph = Graph(gtfs, services)
     primary_nodes = {}
   
-    add_fake_data(gtfs, services, generated_transfers)
     import_generated_transfers(graph, primary_nodes, generated_transfers)
     split_ordered_alternatives(graph)
     delete_impossible_edges(graph, print_warnings=False)
@@ -270,19 +269,4 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
             graph.sources.add(node.source_node)
 
 
-def add_fake_data(gtfs, services, generated_transfers):
-    from blocks_to_transfers.editor.schema import Transfer, TransferType
-     # For testing inject some fake transfers
-    generated_transfers.append(Transfer(
-        from_trip_id='ws_1',
-        to_trip_id='ws_2',
-        transfer_type=TransferType.VEHICLE_CONTINUATION,
-        _rank=100
-    ))
 
-    generated_transfers.append(Transfer(
-        from_trip_id='ws_1',
-        to_trip_id='vs_3',
-        transfer_type=TransferType.VEHICLE_CONTINUATION,
-        _rank=200
-    ))
