@@ -14,7 +14,7 @@ def simplify(gtfs, services, generated_transfers):
     add_fake_data(gtfs, services, generated_transfers)
     import_generated_transfers(graph, primary_nodes, generated_transfers)
     split_ordered_alternatives(graph)
-    delete_impossible_edges(graph, print_warnings=True)
+    delete_impossible_edges(graph, print_warnings=False)
     
     import_predefined_transfers(graph, primary_nodes)
     del primary_nodes
@@ -73,9 +73,9 @@ class Graph:
         target_node.days = target_node.days.difference(new_days)
         assert len(target_node.days) > 0
 
-        self.del_edge(from_node, to_node)
         node_split = Node(target_node.trip, new_days, target_node.in_edges.copy(), target_node.out_edges.copy())
         self.add_node(node_split)
+        self.del_edge(from_node, to_node)
         return node_split
 
 
@@ -153,6 +153,8 @@ def split_ordered_alternatives(graph):
             # Note: empty sets are always disjoint of any other set (including other empty sets)
             if not days_when_best.isdisjoint(days_matched):
                 days_when_best = days_when_best.difference(days_matched)
+                # Always smaller than the original set after this step, as the 
+                # two sets weren't disjoint.
                 to_node_split = graph.split(to_node, from_node, to_node, days_when_best)
                 queue.append(to_node_split)
 
