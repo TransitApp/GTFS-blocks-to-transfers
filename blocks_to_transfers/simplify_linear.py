@@ -4,6 +4,7 @@ from blocks_to_transfers import simplify_graph
 from blocks_to_transfers.service_days import ServiceDays
 
 def simplify(graph):
+    print('Applying linear simplification')
     break_cycles(graph)
     return find_paths(graph)
 

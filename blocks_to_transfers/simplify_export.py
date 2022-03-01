@@ -13,6 +13,7 @@ def export_visit(graph):
 
     Transfers not relating to trip continuations are preserved and updated.
     """
+    print('Exporting continuation graph')
     stack = collections.deque(graph.nodes)
     stack.extend(graph.sources)
     visited = set()

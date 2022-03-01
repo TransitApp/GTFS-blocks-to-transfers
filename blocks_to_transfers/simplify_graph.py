@@ -8,6 +8,7 @@ from . import service_days
 
 
 def simplify(gtfs, services, generated_transfers):
+    print('Merging with predefined transfers and validating against spec')
     graph = Graph(gtfs, services)
     primary_nodes = {}
   
