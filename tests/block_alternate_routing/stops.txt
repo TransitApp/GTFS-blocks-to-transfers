@@ -1,4 +1,0 @@
-stop_id,stop_name,stop_lat,stop_lon
-slocan_city,Harold St at Giffin,49.763303,-117.469690
-slocan_park,Highway 6 at Slocan Park,49.517079,-117.625223
-junction,Osachoff at White,49.441632,-117.538984

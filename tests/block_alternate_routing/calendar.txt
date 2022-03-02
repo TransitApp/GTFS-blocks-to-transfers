@@ -1,4 +1,0 @@
-service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
-all,1,1,1,1,1,1,1,20210101,20211231
-not-fri,1,1,1,1,0,1,1,20210101,20211231
-fri,0,0,0,0,1,0,0,20210101,20211231

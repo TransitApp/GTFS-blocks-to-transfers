@@ -121,7 +121,10 @@ def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
     gtfs_out_dir.mkdir(parents=True, exist_ok=True)
 
     for original_filename in gtfs_in_dir.iterdir():
-        shutil.copy2(original_filename, gtfs_out_dir / original_filename.name)
+        try:
+            shutil.copy2(original_filename, gtfs_out_dir / original_filename.name)
+        except shutil.SameFileError:
+            pass # No need to copy if we're working in-place
 
     for file_schema in GTFS_SUBSET_SCHEMA.values():
         print(f'Writing {file_schema.name}')
