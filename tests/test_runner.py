@@ -8,10 +8,10 @@ TEST_DIR = Path(__file__).parent.resolve()
 WORK_DIR = TEST_DIR / '.work'
 WORK_DIR.mkdir(exist_ok=True)
 
-def find_tests():
+def find_tests(prefix):
     test_dirs = []
     for dirent in TEST_DIR.iterdir():
-        if dirent.is_dir() and dirent.name.startswith('test_'):
+        if dirent.is_dir() and dirent.name.startswith(prefix):
             test_dirs.append(dirent)
     return test_dirs
 
@@ -42,12 +42,13 @@ def run_feed(feed_dir, process_fn):
 
     shutil.rmtree(work_dir)
 
-@pytest.mark.parametrize('feed_dir', find_tests(), ids=lambda test_dir: test_dir.name)
+@pytest.mark.parametrize('feed_dir', find_tests('test_'), ids=lambda test_dir: test_dir.name)
 def test_default(feed_dir):
     run_feed(feed_dir, 
             lambda work_dir: blocks_to_transfers.__main__.process(work_dir, work_dir))
 
 
-def test_linear():
-    run_feed(TEST_DIR / 'test_linear', 
+@pytest.mark.parametrize('feed_dir', find_tests('linear_'), ids=lambda test_dir: test_dir.name)
+def test_linear(feed_dir):
+    run_feed(feed_dir, 
             lambda work_dir: blocks_to_transfers.__main__.process(work_dir, work_dir, use_simplify_linear=True))

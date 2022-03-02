@@ -1,0 +1,6 @@
+from_trip_id,to_trip_id,transfer_type,from_stop_id,to_stop_id
+trip_4,trip_5,4,,
+trip_5,trip_1_b2t:if_mon-tues-wed-thurs,4,,
+trip_1_b2t:if_fri-sat,trip_2_b2t:if_fri-sat,5,,
+trip_2_b2t:if_fri-sat,trip_3,5,,
+trip_1_b2t:if_sun,trip_2_b2t:if_sun,5,,
