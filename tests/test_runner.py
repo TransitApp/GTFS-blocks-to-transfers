@@ -29,16 +29,14 @@ def run_feed(feed_dir, process_fn):
     for filename in (TEST_DIR / 'base').iterdir():
         shutil.copy2(filename, work_dir / filename.name)
 
-    for filename in feed_dir.iterdir():
+    for filename in (feed_dir / 'input').iterdir():
         shutil.copy2(filename, work_dir / filename.name)
 
     print(f'Testing feed in {work_dir}')
     
     process_fn(work_dir)
 
-    expected_dir = Path(str(feed_dir).replace('test_','expected_'))
-
-    for expected_filename in expected_dir.iterdir():
+    for expected_filename in (feed_dir / 'expected').iterdir():
         actual_filename = work_dir / expected_filename.name
         check_file(expected_filename, actual_filename)
 
