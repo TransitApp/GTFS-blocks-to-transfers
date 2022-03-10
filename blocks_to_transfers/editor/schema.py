@@ -52,7 +52,6 @@ class Trip(Entity):
 
     trip_id: str
     service_id: str
-    #shape_id: str = ''
     block_id: str = ''
     route_id: str
 

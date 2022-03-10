@@ -81,7 +81,6 @@ def validate(config, value, context_fn):
     try:
         return convert(config, value)
     except Exception as exc:
-
         raise ValueError(f'{context_fn()}: {exc.args[0]}')
 
 

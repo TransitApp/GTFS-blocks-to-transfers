@@ -27,7 +27,7 @@ An in-seat transfer is likely if:
 Riders probably won't be able to, or want to, to stay on board if:
 
 * The wait time aboard the bus is quite long.
-* The next trip is very similar to the preceding trip, but in reverse. We assess similarity by comparing the sequence of stop locations of the two trips using a modified [Hausdorrf metric](https://en.wikipedia.org/wiki/Hausdorff_distance).
+* The next trip is very similar to the preceding trip, but in reverse. We assess similarity by comparing the sequence of stop locations of the two trips using a modified [Hausdorff metric](https://en.wikipedia.org/wiki/Hausdorff_distance).
 
 You can adjust thresholds or entirely disable a heuristic in [`blocks_to_transfers/config.py`](#).
 
