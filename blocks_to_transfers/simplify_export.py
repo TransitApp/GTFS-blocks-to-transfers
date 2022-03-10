@@ -35,13 +35,11 @@ def export_visit(graph):
 
         for to_node, transfer in from_node.out_edges.items():
             if to_node.has_trip():
-                 to_trip_id = make_trip(graph, trip_id_splits, to_node)
+                to_trip_id = make_trip(graph, trip_id_splits, to_node)
 
-            if from_node.has_trip() and to_node.has_trip():          
-                split_transfer = transfer.clone(
-                    from_trip_id=from_trip_id,
-                    to_trip_id=to_trip_id
-                )
+            if from_node.has_trip() and to_node.has_trip():
+                split_transfer = transfer.clone(from_trip_id=from_trip_id,
+                                                to_trip_id=to_trip_id)
                 transfers_out.append(split_transfer)
 
             stack.append(to_node)
@@ -49,7 +47,7 @@ def export_visit(graph):
     delete_fully_split_trips(graph.gtfs, trip_id_splits)
     split_noncontinuation_transfers(graph.gtfs, trip_id_splits, transfers)
     graph.gtfs.transfers = transfers
-    
+
 
 def split_noncontinuation_transfers(gtfs, trip_id_splits, transfers):
     """
@@ -64,14 +62,15 @@ def split_noncontinuation_transfers(gtfs, trip_id_splits, transfers):
             if transfer.is_continuation:
                 continue
 
-            for split_from_trip_id in trip_id_splits.get(from_trip_id, {from_trip_id}):
+            for split_from_trip_id in trip_id_splits.get(
+                    from_trip_id, {from_trip_id}):
                 transfers_out = transfers.setdefault(split_from_trip_id, [])
 
-                for split_to_trip_id in trip_id_splits.get(transfer.to_trip_id, {transfer.to_trip_id}):
+                for split_to_trip_id in trip_id_splits.get(
+                        transfer.to_trip_id, {transfer.to_trip_id}):
                     split_transfer = transfer.clone(
                         from_trip_id=split_from_trip_id,
-                        to_trip_id=split_to_trip_id
-                    )
+                        to_trip_id=split_to_trip_id)
                     transfers_out.append(split_transfer)
 
 
@@ -109,5 +108,3 @@ def delete_fully_split_trips(gtfs, trip_id_splits):
 
         del gtfs.trips[trip_id]
         del gtfs.stop_times[trip_id]
-
-

@@ -11,11 +11,11 @@ def simplify(gtfs, services, generated_transfers):
     print('Merging with predefined transfers and validating against spec')
     graph = Graph(gtfs, services)
     primary_nodes = {}
-  
+
     import_generated_transfers(graph, primary_nodes, generated_transfers)
     split_ordered_alternatives(graph)
     delete_impossible_edges(graph, print_warnings=False)
-    
+
     import_predefined_transfers(graph, primary_nodes)
     del primary_nodes
     delete_impossible_edges(graph, print_warnings=True)
@@ -25,6 +25,7 @@ def simplify(gtfs, services, generated_transfers):
 
 
 class Graph:
+
     def __init__(self, gtfs, services):
         self.gtfs = gtfs
         self.services = services
@@ -43,13 +44,15 @@ class Graph:
         node = primary_nodes.get(trip_id)
         if node:
             return node
-    
+
         trip = self.gtfs.trips[trip_id]
-        node = primary_nodes[trip_id] = self.add(trip, self.services.days_by_trip(trip))
+        node = primary_nodes[trip_id] = self.add(
+            trip, self.services.days_by_trip(trip))
         return node
 
     def make_primary_edge(self, primary_nodes, transfer):
-        from_node = self.make_primary_node(primary_nodes, transfer.from_trip_id)
+        from_node = self.make_primary_node(primary_nodes,
+                                           transfer.from_trip_id)
         to_node = self.make_primary_node(primary_nodes, transfer.to_trip_id)
         self.add_edge(from_node, to_node, transfer)
 
@@ -75,16 +78,19 @@ class Graph:
         target_node.days = target_node.days.difference(new_days)
         assert len(target_node.days) > 0
 
-        node_split = Node(target_node.trip, new_days, target_node.in_edges.copy(), target_node.out_edges.copy())
+        node_split = Node(target_node.trip, new_days,
+                          target_node.in_edges.copy(),
+                          target_node.out_edges.copy())
         self.add_node(node_split)
         self.del_edge(from_node, to_node)
         return node_split
 
 
 class BaseNode:
+
     def __init__(self, trip, days, in_edges, out_edges):
         self.days = days
-        self.in_edges = in_edges 
+        self.in_edges = in_edges
         self.out_edges = out_edges
         self.composite = False
         self.trip = trip
@@ -104,13 +110,16 @@ class BaseNode:
 
 
 class Node(BaseNode):
+
     def __init__(self, trip, days, in_edges=None, out_edges=None):
         in_edges = in_edges or {}
         out_edges = out_edges or {}
         super().__init__(trip, days, in_edges, out_edges)
 
-        self.source_node = BaseNode(None, service_days.DaySet(), {}, {self: None})
-        self.sink_node = BaseNode(None, service_days.DaySet(), {self: None}, {})
+        self.source_node = BaseNode(None, service_days.DaySet(), {},
+                                    {self: None})
+        self.sink_node = BaseNode(None, service_days.DaySet(), {self: None},
+                                  {})
 
 
 def import_generated_transfers(graph, primary_nodes, generated_transfers):
@@ -145,38 +154,43 @@ def split_ordered_alternatives(graph):
         days_running = from_node.days
         days_matched = service_days.DaySet()
 
-        for to_node, transfer in sorted(from_node.out_edges.items(), key=lambda kv: kv[1]._rank if kv[1] else 0):
+        for to_node, transfer in sorted(from_node.out_edges.items(),
+                                        key=lambda kv: kv[1]._rank
+                                        if kv[1] else 0):
             if not to_node.has_trip():
-                continue # sink_node never needs to be split
+                continue  # sink_node never needs to be split
 
-            to_days_in_frame = graph.services.days_in_from_frame(from_node.trip, to_node.trip, to_node.days)
+            to_days_in_frame = graph.services.days_in_from_frame(
+                from_node.trip, to_node.trip, to_node.days)
             days_when_best = to_days_in_frame.intersection(days_running)
 
             # Note: empty sets are always disjoint of any other set (including other empty sets)
             if not days_when_best.isdisjoint(days_matched):
                 days_when_best = days_when_best.difference(days_matched)
-                # Always smaller than the original set after this step, as the 
+                # Always smaller than the original set after this step, as the
                 # two sets weren't disjoint.
                 to_node_split = graph.split(from_node, to_node, days_when_best)
                 queue.append(to_node_split)
 
             days_matched = days_matched.union(days_when_best)
             queue.append(to_node)
-        
+
 
 def import_predefined_transfers(graph, primary_nodes):
     for from_trip_id, transfers in graph.gtfs.transfers.items():
         if not from_trip_id:
-            continue # route-to-route or stop-to-stop transfers and such
+            continue  # route-to-route or stop-to-stop transfers and such
 
         for transfer in transfers:
             if transfer.from_trip_id == transfer.to_trip_id:
-                print(f'WARNING: Removed self-transfer for trip {transfer.from_trip_id}')
+                print(
+                    f'WARNING: Removed self-transfer for trip {transfer.from_trip_id}'
+                )
                 continue
-            
+
             if not transfer.is_continuation:
                 # Provides walk time between two trips using separate vehicles.
-                continue 
+                continue
 
             graph.make_primary_edge(primary_nodes, transfer)
 
@@ -193,14 +207,17 @@ def delete_impossible_edges(graph, print_warnings):
 
     for from_node in graph.nodes:
         for to_node, transfer in list(from_node.out_edges.items()):
-            if not to_node.has_trip(): # sink_node is permanent 
+            if not to_node.has_trip():  # sink_node is permanent
                 continue
 
-            to_node_days = graph.services.days_in_from_frame(from_node.trip, to_node.trip, to_node.days)
+            to_node_days = graph.services.days_in_from_frame(
+                from_node.trip, to_node.trip, to_node.days)
             match_days = to_node_days.intersection(from_node.days)
             if not match_days:
                 if print_warnings:
-                    print(f'WARNING: Removing {from_node.trip_id} -> {to_node.trip_id} as it does not occur on any days of service.')
+                    print(
+                        f'WARNING: Removing {from_node.trip_id} -> {to_node.trip_id} as it does not occur on any days of service.'
+                    )
                 graph.del_edge(from_node, to_node)
 
 
@@ -232,34 +249,46 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
 
     for neighbour, transfer in list(neighbours.items()):
         if not neighbour.has_trip():
-            continue # Source or sink node (always empty at this point)
+            continue  # Source or sink node (always empty at this point)
 
         if edge_type is EdgeType.OUT:
-            match_days = graph.services.days_in_from_frame(node.trip, neighbour.trip, neighbour.days)
+            match_days = graph.services.days_in_from_frame(
+                node.trip, neighbour.trip, neighbour.days)
         else:
-            match_days = graph.services.days_in_to_frame(neighbour.trip, node.trip, neighbour.days)
+            match_days = graph.services.days_in_to_frame(
+                neighbour.trip, node.trip, neighbour.days)
 
         if match_days in distinct_cases:
             node.composite = True
-            continue 
+            continue
 
         if match_days.isdisjoint(union_cases):
             union_cases = union_cases.union(match_days)
             distinct_cases.add(match_days)
             continue
 
-        conflict_days = ', '.join(str(date) for date in graph.services.to_dates(match_days.intersection(union_cases)))
-        conflict_days = graph.services.bdates(match_days.intersection(union_cases))
-        other_trips = ', '.join(other_node.trip_id for other_node in neighbours if other_node is not neighbour)
+        conflict_days = ', '.join(
+            str(date) for date in graph.services.to_dates(
+                match_days.intersection(union_cases)))
+        conflict_days = graph.services.bdates(
+            match_days.intersection(union_cases))
+        other_trips = ', '.join(other_node.trip_id for other_node in neighbours
+                                if other_node is not neighbour)
 
         if edge_type is EdgeType.OUT:
-            print(f'WARNING: Removing {node.trip_id} [*] -> {neighbour.trip_id} as it does not represent a disjoint case.')
+            print(
+                f'WARNING: Removing {node.trip_id} [*] -> {neighbour.trip_id} as it does not represent a disjoint case.'
+            )
             graph.del_edge(node, neighbour)
         else:
-            print(f'WARNING: Removing {neighbour.trip_id} -> {node.trip_id} [*] as it does not represent a disjoint case.')
+            print(
+                f'WARNING: Removing {neighbour.trip_id} -> {node.trip_id} [*] as it does not represent a disjoint case.'
+            )
             graph.del_edge(neighbour, node)
 
-        print(f'\tConflict with other trips ({other_trips}) on {conflict_days}\n')
+        print(
+            f'\tConflict with other trips ({other_trips}) on {conflict_days}\n'
+        )
 
     residual_days = node.days.difference(union_cases)
     if residual_days:
@@ -269,6 +298,3 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
         else:
             node.source_node.days = node.source_node.days.union(residual_days)
             graph.sources.add(node.source_node)
-
-
-

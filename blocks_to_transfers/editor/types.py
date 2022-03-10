@@ -2,9 +2,9 @@ from datetime import datetime
 
 
 class GTFSTime(int):
-    # GTFS allows times exceeding 23:59:59 as it is simpler to describe night 
-    # services that way in many cases. A trip could theoretically be shifted 
-    # forward an arbitrary number of days using this notation, but we block it 
+    # GTFS allows times exceeding 23:59:59 as it is simpler to describe night
+    # services that way in many cases. A trip could theoretically be shifted
+    # forward an arbitrary number of days using this notation, but we block it
     # as it just creates confusion.
     MAX_HOUR_REPRESENTATION = 36
 
@@ -17,10 +17,12 @@ class GTFSTime(int):
 
         h, m, s = time_str.split(':')
 
-        if int(h) > GTFSTime.MAX_HOUR_REPRESENTATION:  
-            raise ValueError(f'Refusing to consider a service day longer than {GTFSTime.MAX_HOUR_REPRESENTATION} hours')
+        if int(h) > GTFSTime.MAX_HOUR_REPRESENTATION:
+            raise ValueError(
+                f'Refusing to consider a service day longer than {GTFSTime.MAX_HOUR_REPRESENTATION} hours'
+            )
 
-        return super().__new__(cls, 3600*int(h) + 60*int(m) + int(s))
+        return super().__new__(cls, 3600 * int(h) + 60 * int(m) + int(s))
 
     def __str__(self):
         if self == -1:
@@ -38,13 +40,17 @@ class GTFSTime(int):
 
 
 class GTFSDate(datetime):
+
     def __new__(cls, *args, **kwargs):
         if len(args) != 1 or kwargs:
             return super().__new__(cls, *args, **kwargs)
 
         iso_str = args[0]
         if isinstance(iso_str, datetime):
-            return super().__new__(cls, year=iso_str.year, month=iso_str.month, day=iso_str.day)
+            return super().__new__(cls,
+                                   year=iso_str.year,
+                                   month=iso_str.month,
+                                   day=iso_str.day)
 
         if not iso_str:
             raise ValueError('Invalid date: empty')
@@ -61,10 +67,15 @@ class GTFSDate(datetime):
 
 
 class Entity:
+
     def __init__(self, **kwargs):
         self._gtfs = None
         self._saved_properties = {}
-        default_init = {k: v for k, v in self.__class__.__dict__.items() if Entity._is_field(k, v)}
+        default_init = {
+            k: v
+            for k, v in self.__class__.__dict__.items()
+            if Entity._is_field(k, v)
+        }
         self.__dict__.update(default_init)
         self.__dict__.update(kwargs)
 
@@ -97,7 +108,10 @@ class Entity:
         return self.__dict__.get(key, default)
 
     def __repr__(self):
-        filtered_dict = {k: v for k, v in self.__dict__.items() if k not in {'_gtfs'}}
+        filtered_dict = {
+            k: v
+            for k, v in self.__dict__.items() if k not in {'_gtfs'}
+        }
         return f'{self.__class__.__name__} {repr(filtered_dict)}'
 
     def clone(self, **overrides):
@@ -108,6 +122,7 @@ class Entity:
 
 
 def saved_property(compute_fn):
+
     def get_fn(self):
         if compute_fn.__name__ not in self._saved_properties:
             self._saved_properties[compute_fn.__name__] = compute_fn(self)

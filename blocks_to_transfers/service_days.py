@@ -3,13 +3,15 @@ from datetime import timedelta, datetime
 from blocks_to_transfers.editor.schema import CalendarDate, ExceptionType
 from blocks_to_transfers.editor.types import GTFSDate
 
+
 class DaySet(int):
+
     def __new__(cls, num=0):
         return super().__new__(cls, num)
 
     def intersection(a, b):
         return DaySet(a & b)
-        
+
     def union(a, b):
         return DaySet(a | b)
 
@@ -41,19 +43,25 @@ class DaySet(int):
         for i in range(len(self)):
             if self[i]:
                 yield i
-            
+
+
 class ServiceDays:
+
     def __init__(self, gtfs) -> None:
         print('Calculating days by service')
         self.gtfs = gtfs
         self.synth_service_counter = 0  # Number of services we needed to add to the feed
         self.init_days_by_service(gtfs)
-        self.service_by_days = ServiceDays.get_reverse_index(self.days_by_service)
+        self.service_by_days = ServiceDays.get_reverse_index(
+            self.days_by_service)
 
     def init_days_by_service(self, gtfs):
         all_service_ids = gtfs.calendar.keys() | gtfs.calendar_dates.keys()
         days_by_service = {}
-        weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        weekdays = [
+            'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
+            'sunday'
+        ]
 
         # 1. Find a plausible starting point for the feed
         start_day = datetime.max
@@ -84,11 +92,11 @@ class ServiceDays:
                     weekday_name = weekdays[current_day.weekday()]
 
                     if calendar[weekday_name]:
-                        date_index = 1 << (start_index+i)
+                        date_index = 1 << (start_index + i)
                         service_days |= date_index
 
                     current_day += timedelta(days=1)
-            
+
             for date in gtfs.calendar_dates.get(service_id, []):
                 date_index = 1 << (date.date - start_day).days
                 if date.exception_type == ExceptionType.ADD:
@@ -103,10 +111,14 @@ class ServiceDays:
 
     @staticmethod
     def get_reverse_index(days_by_service):
-        return {days: service_id for service_id, days in days_by_service.items()}
+        return {
+            days: service_id
+            for service_id, days in days_by_service.items()
+        }
 
     def days_by_trip(self, trip, extra_shift=0):
-        return self.days_by_service[trip.service_id].shift(trip.shift_days + extra_shift)
+        return self.days_by_service[trip.service_id].shift(trip.shift_days +
+                                                           extra_shift)
 
     @staticmethod
     def get_shift(from_trip, to_trip):
@@ -133,16 +145,17 @@ class ServiceDays:
         service_id = self.service_by_days.get(days)
         if service_id:
             return service_id
-        
+
         service_id = f'b2t:service_{self.synth_service_counter}'
         self.synth_service_counter += 1
         self.service_by_days[days] = service_id
 
-        self.gtfs.calendar_dates[service_id] = [CalendarDate(
-            service_id=service_id,
-            date=GTFSDate(date),
-            exception_type=ExceptionType.ADD
-        ) for date in self.to_dates(days)]
+        self.gtfs.calendar_dates[service_id] = [
+            CalendarDate(service_id=service_id,
+                         date=GTFSDate(date),
+                         exception_type=ExceptionType.ADD)
+            for date in self.to_dates(days)
+        ]
 
         return service_id
 
@@ -152,14 +165,14 @@ class ServiceDays:
 
     def bdates(self, dates):
         return wdates(self.to_dates(dates))
-    
+
     def pdates(self, dates):
         return pdates(list(self.to_dates(dates)))
 
 
 def pdates(dates):
     sdates = sorted(date.strftime('%m%d') for date in dates)
-    tdates =  ', '.join(sdates[:14])
+    tdates = ', '.join(sdates[:14])
     if len(dates) > 14:
         tdates += ' ...'
     return tdates
@@ -168,7 +181,5 @@ def pdates(dates):
 def wdates(dates):
     sdates = sorted(date for date in dates)
     sdates = ['UMTWRFS'[int(date.strftime('%w'))] for date in sdates]
-    tdates =  ''.join(sdates[:14])
+    tdates = ''.join(sdates[:14])
     return tdates
-
-

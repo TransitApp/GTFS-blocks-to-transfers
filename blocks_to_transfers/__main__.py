@@ -4,7 +4,10 @@ import shutil
 from . import convert_blocks, editor, service_days, classify_transfers, simplify_graph, simplify_linear, simplify_export
 
 
-def process(in_dir, out_dir, use_simplify_linear=False, remove_existing_files=False):
+def process(in_dir,
+            out_dir,
+            use_simplify_linear=False,
+            remove_existing_files=False):
     gtfs = editor.load(in_dir)
 
     services = service_days.ServiceDays(gtfs)
@@ -27,22 +30,30 @@ def process(in_dir, out_dir, use_simplify_linear=False, remove_existing_files=Fa
 
 
 def main():
-    cmd = argparse.ArgumentParser(description='Predicts trip-to-trip transfers from block_ids in GTFS feeds')
+    cmd = argparse.ArgumentParser(
+        description=
+        'Predicts trip-to-trip transfers from block_ids in GTFS feeds')
     cmd.add_argument('feed', help='Path to a directory containing a GTFS feed')
     cmd.add_argument('out_dir', help='Directory to contain the modified feed')
-    cmd.add_argument('-L','--linear', action='store_true', help='Apply linear simplification')
-    cmd.add_argument('--remove-existing-files', action='store_true', help='Remove all files in the output directory before expoting')
+    cmd.add_argument('-L',
+                     '--linear',
+                     action='store_true',
+                     help='Apply linear simplification')
+    cmd.add_argument(
+        '--remove-existing-files',
+        action='store_true',
+        help='Remove all files in the output directory before expoting')
     args = cmd.parse_args()
 
     if os.environ.get('VSCODE_DEBUG'):
         import debugpy
         print('Waiting for VSCode to attach')
         debugpy.listen(5678)
-        debugpy.wait_for_client()  
+        debugpy.wait_for_client()
 
-
-    process(args.feed, args.out_dir, 
-            use_simplify_linear=args.linear, 
+    process(args.feed,
+            args.out_dir,
+            use_simplify_linear=args.linear,
             remove_existing_files=args.remove_existing_files)
 
 

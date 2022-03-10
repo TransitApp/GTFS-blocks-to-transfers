@@ -16,17 +16,24 @@ def trip_shapes_similar(similarity_results, shape_a, shape_b):
     if cache_value is not None:
         return cache_value
     else:
-        return similarity_results.setdefault(cache_key, compute_shapes_similar(shape_a, shape_b))
+        return similarity_results.setdefault(
+            cache_key, compute_shapes_similar(shape_a, shape_b))
 
 
 def compute_shapes_similar(shape_a, shape_b):
-    return hausdorff_percentile(shape_a, shape_b,
-                                threshold=config.InSeatTransfers.similarity_percentile) < config.InSeatTransfers.similarity_distance
+    return hausdorff_percentile(
+        shape_a,
+        shape_b,
+        threshold=config.InSeatTransfers.similarity_percentile
+    ) < config.InSeatTransfers.similarity_distance
 
 
 def hausdorff_percentile(shape_a, shape_b, threshold):
-    distances = distance_point_to_nearest_segment(shape_points=shape_a, shape_segments=shape_b)
-    distances.extend(distance_point_to_nearest_segment(shape_points=shape_b, shape_segments=shape_a))
+    distances = distance_point_to_nearest_segment(shape_points=shape_a,
+                                                  shape_segments=shape_b)
+    distances.extend(
+        distance_point_to_nearest_segment(shape_points=shape_b,
+                                          shape_segments=shape_a))
     return percentile(distances, threshold)
 
 
@@ -42,7 +49,8 @@ def percentile(values, threshold):
     if index >= len(values):
         return values[-1]
 
-    return values[index - 1] + interpolation_factor * (values[index] - values[index - 1])
+    return values[index - 1] + interpolation_factor * (values[index] -
+                                                       values[index - 1])
 
 
 def distance_point_to_nearest_segment(shape_points, shape_segments):
@@ -53,13 +61,15 @@ def distance_point_to_nearest_segment(shape_points, shape_segments):
     for pt in shape_points:
         d_nearest_segment = inf
         for i_seg in range(len(shape_segments) - 1):
-            d_point_segment = pt.distance_to_segment(shape_segments[i_seg], shape_segments[i_seg + 1])
+            d_point_segment = pt.distance_to_segment(shape_segments[i_seg],
+                                                     shape_segments[i_seg + 1])
             if d_point_segment < d_nearest_segment:
                 d_nearest_segment = d_point_segment
 
         distances.append(d_nearest_segment)
 
     return distances
+
 
 class LatLon:
     # Sources:
@@ -81,7 +91,8 @@ class LatLon:
     def angular_distance_to(self, other):
         d_lat = other.lat - self.lat
         d_lon = other.lon - self.lon
-        a = sin(d_lat / 2)**2 + cos(self.lat) * cos(other.lat) * sin(d_lon / 2)**2
+        a = sin(
+            d_lat / 2)**2 + cos(self.lat) * cos(other.lat) * sin(d_lon / 2)**2
         return 2 * asin(sqrt(a))
 
     def distance_to(self, other):
@@ -89,11 +100,14 @@ class LatLon:
 
     def bearing_to(self, other):
         y = sin(other.lon - self.lon) * cos(other.lat)
-        x = cos(self.lat) * sin(other.lat) - sin(self.lat) * cos(other.lat) * cos(other.lon - self.lon)
+        x = cos(self.lat) * sin(other.lat) - sin(self.lat) * cos(
+            other.lat) * cos(other.lon - self.lon)
         return atan2(y, x)
 
     def add_bearing_and_angular_distance(self, bearing, dist):
-        lat = asin(sin(self.lat)*cos(dist) + cos(self.lat)*sin(dist)*cos(bearing))
+        lat = asin(
+            sin(self.lat) * cos(dist) +
+            cos(self.lat) * sin(dist) * cos(bearing))
         lon = self.lon \
               + atan2(sin(bearing)*sin(dist)*cos(self.lat), cos(dist) - sin(self.lat)*sin(lat))
 
@@ -112,7 +126,7 @@ class LatLon:
         d_l2_x = l2.angular_distance_to(x)
 
         d_cross = asin(sin(d_l1_x) * sin(t_l1_x - t_l1_l2))
-        d_along = acos(cos(d_l1_x)/cos(d_cross))
+        d_along = acos(cos(d_l1_x) / cos(d_cross))
 
         lx = l1.add_bearing_and_angular_distance(t_l1_l2, d_along)
         d_lx_x = lx.angular_distance_to(x)

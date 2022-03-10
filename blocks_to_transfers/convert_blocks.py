@@ -5,9 +5,12 @@ from collections import namedtuple
 from .editor.schema import Transfer, DAY_SEC
 from . import config, service_days
 
-BlockConvertState = namedtuple('BlockConvertState', ('gtfs', 'services', 'shape_similarity_results'))
+BlockConvertState = namedtuple(
+    'BlockConvertState', ('gtfs', 'services', 'shape_similarity_results'))
+
 
 class TripConvertState:
+
     def __init__(self, data, trip) -> None:
         self.trip = trip
         self.shift_days = 0
@@ -30,7 +33,7 @@ def convert(gtfs, services):
             converted_transfers.extend(convert_block(data, trips))
         except InvalidBlockError as exc:
             print(str(exc))
-            
+
     return converted_transfers
 
 
@@ -38,16 +41,20 @@ def group_trips(gtfs):
     unique_shapes = {}
     trips_by_block = {}
 
-    for trip in sorted(gtfs.trips.values(), key=lambda trip: trip.first_departure):
+    for trip in sorted(gtfs.trips.values(),
+                       key=lambda trip: trip.first_departure):
         if not trip.block_id:
             continue
 
         if len(gtfs.stop_times.get(trip.trip_id, [])) < 2:
-            print(f'Warning: Trip {trip.trip_id} deleted as it has fewer than two stops.')
+            print(
+                f'Warning: Trip {trip.trip_id} deleted as it has fewer than two stops.'
+            )
             continue
 
         if config.InSeatTransfers.ignore_return_via_similar_trip:
-            trip.shape_ref = unique_shapes.setdefault(trip.stop_shape, trip.stop_shape)
+            trip.shape_ref = unique_shapes.setdefault(trip.stop_shape,
+                                                      trip.stop_shape)
 
         trips_by_block.setdefault(trip.block_id, []).append(trip)
 
@@ -98,12 +105,13 @@ def convert_block(data, trips):
 
 
 class InvalidBlockError(ValueError):
+
     def __init__(self, trip, cont_trip, debug):
         super().__init__(self, 'Invalid block')
         self.trip = trip
         self.cont_trip = cont_trip
         self.debug = debug
-        
+
     def __str__(self):
         wait_time = self.cont_trip.first_departure - self.trip.last_arrival
         block_id = self.trip.block_id
@@ -130,10 +138,12 @@ def consider_transfer(data, trip_state, cont_trip):
     if wait_time > config.TripToTripTransfers.max_wait_time:
         raise StopIteration
 
-    cont_days_in_from_frame = data.services.days_by_trip(cont_trip, -trip_state.shift_days) # From trip's frame of reference
+    cont_days_in_from_frame = data.services.days_by_trip(
+        cont_trip, -trip_state.shift_days)  # From trip's frame of reference
 
     # Can only match on days originating trip is running
-    days_when_best = cont_days_in_from_frame.intersection(trip_state.days_to_match)
+    days_when_best = cont_days_in_from_frame.intersection(
+        trip_state.days_to_match)
 
     # A: trip and cont_trip never run on the same day; or
     # B: There's no day cont_trip runs on that isn't served by an earlier trip
@@ -149,11 +159,10 @@ def consider_transfer(data, trip_state, cont_trip):
             debug = data.services.bdates(days_when_best)
             raise InvalidBlockError(trip_state.trip, cont_trip, debug)
 
-    trip_state.days_to_match = trip_state.days_to_match.difference(days_when_best)
+    trip_state.days_to_match = trip_state.days_to_match.difference(
+        days_when_best)
     trip_state.num_matches += 1
 
-    return Transfer(
-        from_trip_id=trip_state.trip.trip_id,
-        to_trip_id=cont_trip.trip_id,
-        _rank = trip_state.num_matches
-    )
+    return Transfer(from_trip_id=trip_state.trip.trip_id,
+                    to_trip_id=cont_trip.trip_id,
+                    _rank=trip_state.num_matches)

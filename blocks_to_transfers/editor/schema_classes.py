@@ -1,9 +1,17 @@
 from collections import namedtuple
+
 Field = namedtuple('Field', ('type', 'required', 'default'))
 
 
 class File:
-    def __init__(self, id, name, filename=None, required=True, group_id=None, inner_dict=False):
+
+    def __init__(self,
+                 id,
+                 name,
+                 filename=None,
+                 required=True,
+                 group_id=None,
+                 inner_dict=False):
         # Primary key for this file, serves as the key of the generated dict
         self.id = id
 
@@ -28,11 +36,16 @@ class File:
         self.class_def = None
 
     def get_fields(self):
-        return {k: Field(type=v, required=k not in self.class_def.__dict__, default=self.class_def.__dict__.get(k))
-                for k, v in self.class_def.__annotations__.items()}
+        return {
+            k: Field(type=v,
+                     required=k not in self.class_def.__dict__,
+                     default=self.class_def.__dict__.get(k))
+            for k, v in self.class_def.__annotations__.items()
+        }
 
 
 class Schema:
+
     def __init__(self, *args):
         self.entities = {}
         for file in args:

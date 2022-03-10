@@ -3,6 +3,7 @@ import enum
 from blocks_to_transfers import simplify_graph
 from blocks_to_transfers.service_days import ServiceDays
 
+
 def simplify(graph):
     print('Applying linear simplification')
     break_cycles(graph)
@@ -19,6 +20,7 @@ def break_cycles(graph):
     the cycle. For example, the earliest day a cycle could begin is the first 
     day of the feed.
     """
+
     class Visited(enum.Enum):
         ENTER = 0
         EXIT = 1
@@ -30,7 +32,7 @@ def break_cycles(graph):
         from_node = stack[-1]
 
         assert state.get(from_node) != Visited.EXIT
-        
+
         if state.get(from_node) == Visited.ENTER:
             # All children of this node are now visited
             state[from_node] = Visited.EXIT
@@ -42,30 +44,39 @@ def break_cycles(graph):
 
         for to_node in list(from_node.out_edges.keys()):
             shift_days = ServiceDays.get_shift(from_node.trip, to_node.trip)
-            match_days = from_node.days.intersection(to_node.days.shift(shift_days))
+            match_days = from_node.days.intersection(
+                to_node.days.shift(shift_days))
 
             if to_node not in state:
                 # Unvisited node
-                stack.append(to_node) 
+                stack.append(to_node)
                 continue
 
             if state[to_node] == Visited.EXIT:
                 # Alternative path to a visited node
-                continue 
+                continue
 
-            # Cycle: edge is removed, days along edge reassigned to sink node 
+            # Cycle: edge is removed, days along edge reassigned to sink node
             # of from_node and source node of to_node
-            print(f'Cycle {to_node.trip_id} -> ... -> {from_node.trip_id} -> {to_node.trip_id} [{graph.services.pdates(match_days)}]')
-            graph.del_edge(from_node, to_node) 
-            
+            print(
+                f'Cycle {to_node.trip_id} -> ... -> {from_node.trip_id} -> {to_node.trip_id} [{graph.services.pdates(match_days)}]'
+            )
+            graph.del_edge(from_node, to_node)
+
             match_days_reshifted = match_days.shift(-shift_days)
-            from_node.sink_node.days = from_node.sink_node.days.union(match_days_reshifted)
+            from_node.sink_node.days = from_node.sink_node.days.union(
+                match_days_reshifted)
             graph.sinks.add(from_node.sink_node)
 
-            to_node.source_node.days = to_node.source_node.days.union(match_days)
+            to_node.source_node.days = to_node.source_node.days.union(
+                match_days)
             graph.sources.add(to_node.source_node)
-            print(f'\tResolved {from_node.trip_id} -> {from_node.sink_node.trip_id} [{graph.services.pdates(from_node.sink_node.days)}]')
-            print(f'\tResolved {to_node.source_node.trip_id} -> {to_node.trip_id} [{graph.services.pdates(to_node.source_node.days)}]')
+            print(
+                f'\tResolved {from_node.trip_id} -> {from_node.sink_node.trip_id} [{graph.services.pdates(from_node.sink_node.days)}]'
+            )
+            print(
+                f'\tResolved {to_node.source_node.trip_id} -> {to_node.trip_id} [{graph.services.pdates(to_node.source_node.days)}]'
+            )
 
 
 class Transition:
@@ -93,7 +104,7 @@ def find_paths(graph):
     """
     transformed_graph = simplify_graph.Graph(graph.gtfs, graph.services)
     stack = collections.deque(Transition(source) for source in graph.sources)
-    
+
     for node in graph.nodes:
         if node.composite:
             stack.append(Transition(node))
@@ -111,7 +122,9 @@ def find_paths(graph):
 
             if not to_node.has_trip():
                 # End of the block (sink node encountered)
-                add_path_to_graph(transformed_graph, last_transition=from_node, days=match_days) 
+                add_path_to_graph(transformed_graph,
+                                  last_transition=from_node,
+                                  days=match_days)
                 continue
 
             # A new edge continuing the block
@@ -119,23 +132,30 @@ def find_paths(graph):
             match_days = match_days.shift(-shift_days)
 
             # FIXME: What happens if the very first trip of the year requires shifting back?
-            to_transition = Transition(to_node, parent=from_node, days=match_days)
+            to_transition = Transition(to_node,
+                                       parent=from_node,
+                                       days=match_days)
 
             if to_node.composite:
                 # Acts like it were a sink node and ends the block
-                print(f'Composite node {to_node.trip_id} will not be split along {from_node.trip_id} -> {to_node.trip_id}')
-                add_path_to_graph(transformed_graph, last_transition=to_transition, days=match_days)
+                print(
+                    f'Composite node {to_node.trip_id} will not be split along {from_node.trip_id} -> {to_node.trip_id}'
+                )
+                add_path_to_graph(transformed_graph,
+                                  last_transition=to_transition,
+                                  days=match_days)
                 continue
 
             stack.append(to_transition)
-                    
+
     return transformed_graph
 
 
 def add_path_to_graph(t_graph, last_transition, days):
     composite_nodes = {}
     current_transition = last_transition
-    split_node = get_path_node(t_graph, composite_nodes, current_transition, days)
+    split_node = get_path_node(t_graph, composite_nodes, current_transition,
+                               days)
 
     while True:
         parent_transition = current_transition.parent
@@ -147,10 +167,11 @@ def add_path_to_graph(t_graph, last_transition, days):
             t_graph.sources.add(split_node.source_node)
             break
 
-
-        parent_days = t_graph.services.days_in_from_frame(parent_transition.trip, last_transition.trip, days)
+        parent_days = t_graph.services.days_in_from_frame(
+            parent_transition.trip, last_transition.trip, days)
         transfer = parent_transition.out_edges[current_transition.node]
-        parent_split_node = get_path_node(t_graph, composite_nodes, parent_transition, parent_days)
+        parent_split_node = get_path_node(t_graph, composite_nodes,
+                                          parent_transition, parent_days)
         t_graph.add_edge(parent_split_node, split_node, transfer)
         split_node = parent_split_node
         current_transition = parent_transition
@@ -164,7 +185,8 @@ def get_path_node(t_graph, composite_nodes, transition, requested_days):
     if composite_node:
         return composite_node
 
-    composite_node = composite_nodes[transition.node] = simplify_graph.Node(transition.node.trip, transition.node.days)
+    composite_node = composite_nodes[transition.node] = simplify_graph.Node(
+        transition.node.trip, transition.node.days)
     t_graph.add_node(composite_node)
 
     return composite_node

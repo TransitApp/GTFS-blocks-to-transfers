@@ -16,7 +16,8 @@ def load(gtfs_dir):
 
         if not filepath.exists():
             if file_schema.required:
-                raise ValueError(f'{file_schema.filename}: required file is missing')
+                raise ValueError(
+                    f'{file_schema.filename}: required file is missing')
             else:
                 continue
 
@@ -25,15 +26,16 @@ def load(gtfs_dir):
             header_row = next(reader, None)
             if not header_row:
                 if file_schema.required:
-                    raise ValueError(f'{file_schema.filename}: required file is empty')
+                    raise ValueError(
+                        f'{file_schema.filename}: required file is empty')
                 else:
                     continue
 
             merge_with_defined_fields(file_schema, header_row)
             entities = {}
             for entity in parse_rows(gtfs, file_schema, header_row, reader):
-               index_entity(file_schema, entities, entity)
-                
+                index_entity(file_schema, entities, entity)
+
             gtfs[file_schema.name] = sorted_entities(file_schema, entities)
 
     return gtfs
@@ -43,7 +45,8 @@ def merge_with_defined_fields(file_schema, header_row):
     fields = file_schema.get_fields()
     for name, config in fields.items():
         if config.required and name not in header_row:
-            raise ValueError(f'{file_schema.filename}:1: missing required field {name}')
+            raise ValueError(
+                f'{file_schema.filename}:1: missing required field {name}')
 
     for name in header_row:
         if name not in fields:
@@ -61,10 +64,15 @@ def parse_rows(gtfs, file_schema, header_row, reader):
         for name, value in zip(header_row, row):
             config = fields[name]
             if config.required and not value:
-                raise ValueError(f'{file_schema.filename}:{lineno}: required field {name} is empty')
+                raise ValueError(
+                    f'{file_schema.filename}:{lineno}: required field {name} is empty'
+                )
 
-            entity[name] = validate(config, value,
-                                    context_fn=lambda: f'{file_schema}:{lineno} field {name} = {repr(value)}')
+            entity[name] = validate(
+                config,
+                value,
+                context_fn=lambda:
+                f'{file_schema}:{lineno} field {name} = {repr(value)}')
 
         yield entity
 
@@ -107,7 +115,8 @@ def sorted_entities(file_schema, entities):
     if file_schema.group_id:
         if file_schema.inner_dict:
             for group_key, group in entities.items():
-                entities[group_key] = dict(sorted(group.items(), key=lambda kv: kv[0]))
+                entities[group_key] = dict(
+                    sorted(group.items(), key=lambda kv: kv[0]))
         else:
             for group in entities.values():
                 group.sort(key=lambda entity: entity[file_schema.group_id])
@@ -122,9 +131,10 @@ def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
 
     for original_filename in gtfs_in_dir.iterdir():
         try:
-            shutil.copy2(original_filename, gtfs_out_dir / original_filename.name)
+            shutil.copy2(original_filename,
+                         gtfs_out_dir / original_filename.name)
         except shutil.SameFileError:
-            pass # No need to copy if we're working in-place
+            pass  # No need to copy if we're working in-place
 
     for file_schema in GTFS_SUBSET_SCHEMA.values():
         print(f'Writing {file_schema.name}')
@@ -135,18 +145,21 @@ def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
         flat_entities = flatten_entities(file_schema, entities)
         fields = file_schema.get_fields()
 
-        with open(gtfs_out_dir / file_schema.filename, 'w', encoding='utf-8') as f:
+        with open(gtfs_out_dir / file_schema.filename, 'w',
+                  encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow(fields.keys())
             for entity in flat_entities:
-                writer.writerow(serialize_field(entity[name]) for name in fields)
+                writer.writerow(
+                    serialize_field(entity[name]) for name in fields)
 
 
 def flatten_entities(file_schema, entities):
     if file_schema.group_id:
         flat_entities = []
         for entity_list in entities.values():
-            flat_entities.extend(entity_list.values() if file_schema.inner_dict else entity_list)
+            flat_entities.extend(entity_list.values() if file_schema.
+                                 inner_dict else entity_list)
         return flat_entities
     else:
         return entities.values()
@@ -154,9 +167,11 @@ def flatten_entities(file_schema, entities):
 
 def serialize_field(value):
     if isinstance(value, (bool, enum.IntEnum)):
-        return str(int(value)) # Use the numerical representation of this type in final output
+        return str(
+            int(value)
+        )  # Use the numerical representation of this type in final output
 
-    return str(value) # Direct conversion to string
+    return str(value)  # Direct conversion to string
 
 
 def clone(entities, key, new_key):
@@ -165,7 +180,9 @@ def clone(entities, key, new_key):
 
     entries = entities[key]
     if isinstance(entries, list):
-        entities[new_key] = [clone_and_index(entity, new_key) for entity in entries]
+        entities[new_key] = [
+            clone_and_index(entity, new_key) for entity in entries
+        ]
     else:
         entities[new_key] = clone_and_index(entries, new_key)
 
@@ -177,5 +194,3 @@ def clone_and_index(entity, new_key):
     new_entity = entity.clone()
     new_entity[field_schema.id] = new_key
     return new_entity
-
-
