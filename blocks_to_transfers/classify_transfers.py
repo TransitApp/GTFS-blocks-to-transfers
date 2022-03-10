@@ -1,6 +1,8 @@
 """
-For each continuation identified by converting blocks, use heuristics to predict whether a transfer is most likely to be of type:
-4: In-seat transfe
+For each continuation identified by converting blocks, use heuristics to 
+predict whether a transfer is most likely to be of type:
+
+4: In-seat transfer
 5: Vehicle continuation only (for operational reasons)
 """
 from .editor.schema import DAY_SEC, TransferType
@@ -27,12 +29,13 @@ def get_transfer_type(gtfs, unique_shapes, shape_similarity_results, transfer):
         return TransferType.VEHICLE_CONTINUATION
 
     # cont_trip resumes too far away from where trip ended (probably involves deadheading)
-    if trip.last_point.dist_to(cont_trip.first_point) > config.InSeatTransfers.same_location_distance:
+    if trip.last_point.distance_to(cont_trip.first_point) > config.InSeatTransfers.same_location_distance:
         return TransferType.VEHICLE_CONTINUATION
 
-    # trip and cont_trip form a loop, therefore any similarity in shape is not an issue for riders
-    if (trip.first_point.dist_to(cont_trip.first_point) < config.InSeatTransfers.same_location_distance
-        and trip.last_point.dist_to(cont_trip.last_point) < config.InSeatTransfers.same_location_distance):
+    # trip and cont_trip form a full loop, therefore riders may want to stay 
+    # onboard despite similarity in shape.
+    if (trip.first_point.distance_to(cont_trip.first_point) < config.InSeatTransfers.same_location_distance
+        and trip.last_point.distance_to(cont_trip.last_point) < config.InSeatTransfers.same_location_distance):
         return TransferType.IN_SEAT
 
     if config.InSeatTransfers.ignore_return_via_same_route:

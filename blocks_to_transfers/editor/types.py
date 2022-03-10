@@ -2,6 +2,12 @@ from datetime import datetime
 
 
 class GTFSTime(int):
+    # GTFS allows times exceeding 23:59:59 as it is simpler to describe night 
+    # services that way in many cases. A trip could theoretically be shifted 
+    # forward an arbitrary number of days using this notation, but we block it 
+    # as it just creates confusion.
+    MAX_HOUR_REPRESENTATION = 36
+
     def __new__(cls, time_str):
         if isinstance(time_str, int):
             return super().__new__(cls, time_str)
@@ -11,11 +17,8 @@ class GTFSTime(int):
 
         h, m, s = time_str.split(':')
 
-        if int(h) > 36:
-            # GTFS allows a service day to be longer than 24h as it makes it simpler to describe night services that way
-            # in many cases. A trip could theoretically be shifted forward an arbitrary number of days using this
-            # notation, but we block it as it just creates confusion.
-            raise ValueError(f'Refusing to consider a service day longer than 36 hours')
+        if int(h) > GTFSTime.MAX_HOUR_REPRESENTATION:  
+            raise ValueError(f'Refusing to consider a service day longer than {GTFSTime.MAX_HOUR_REPRESENTATION} hours')
 
         return super().__new__(cls, 3600*int(h) + 60*int(m) + int(s))
 

@@ -17,8 +17,10 @@ class InSeatTransfers:
     # Maximum wait time for riders aboard the vehicle. May be -1 if this agency never allows in-seat transfers.
     max_wait_time = 600  # seconds
 
-    # Used to determine whether two stops are sufficiently close to be considered 'at the same location', needed for
-    # a variety of heuristics.
+    # Determines whether two stops are sufficiently close to be considered 'at the same location'.
+    # Used to:
+    #   - Discard in-seat transfers where the last stop of previous trip and first stop of ensuing trip are further apart than this distance
+    #   - Calculate whether or not a trip is a return trip of the previous trip
     same_location_distance = 100  # meters
 
     # If true, ignore all trips serving the same route in the opposite direction

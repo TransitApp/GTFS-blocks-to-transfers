@@ -60,13 +60,15 @@ class Graph:
         del from_node.out_edges[to_node]
         del to_node.in_edges[from_node]
 
-    def split(self, target_node, from_node, to_node, days):
+    def split(self, from_node, to_node, days):
         """
-        Take target_node and make a new node representing a subset of its days 
-        of operation. The new node has all the connections the previous node did,
-        except that it replaces the connection between from_node and to_node.
+        Take target_node (currently always to_node) and make a new node 
+        representing a subset of its days of operation. The new node has all 
+        the connections the previous node did, except that it replaces the 
+        connection between from_node and to_node.
         """
 
+        target_node = to_node
         new_days = days.intersection(target_node.days)
         assert len(new_days) > 0
 
@@ -155,7 +157,7 @@ def split_ordered_alternatives(graph):
                 days_when_best = days_when_best.difference(days_matched)
                 # Always smaller than the original set after this step, as the 
                 # two sets weren't disjoint.
-                to_node_split = graph.split(to_node, from_node, to_node, days_when_best)
+                to_node_split = graph.split(from_node, to_node, days_when_best)
                 queue.append(to_node_split)
 
             days_matched = days_matched.union(days_when_best)
