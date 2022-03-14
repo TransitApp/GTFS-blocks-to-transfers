@@ -55,10 +55,6 @@ class Trip(Entity):
     block_id: str = ''
     route_id: str
 
-    def __init__(self, **kwargs):
-        self.visited = False
-        super().__init__(**kwargs)
-
     @property
     def first_stop_time(self):
         return self._gtfs.stop_times[self.trip_id][0]

@@ -51,8 +51,7 @@ class Graph:
         return node
 
     def make_primary_edge(self, primary_nodes, transfer):
-        from_node = self.make_primary_node(primary_nodes,
-                                           transfer.from_trip_id)
+        from_node = self.make_primary_node(primary_nodes, transfer.from_trip_id)
         to_node = self.make_primary_node(primary_nodes, transfer.to_trip_id)
         self.add_edge(from_node, to_node, transfer)
 
@@ -118,8 +117,7 @@ class Node(BaseNode):
 
         self.source_node = BaseNode(None, service_days.DaySet(), {},
                                     {self: None})
-        self.sink_node = BaseNode(None, service_days.DaySet(), {self: None},
-                                  {})
+        self.sink_node = BaseNode(None, service_days.DaySet(), {self: None}, {})
 
 
 def import_generated_transfers(graph, primary_nodes, generated_transfers):
@@ -272,7 +270,8 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
                 match_days.intersection(union_cases)))
         conflict_days = graph.services.bdates(
             match_days.intersection(union_cases))
-        other_trips = ', '.join(other_node.trip_id for other_node in neighbours
+        other_trips = ', '.join(other_node.trip_id
+                                for other_node in neighbours
                                 if other_node is not neighbour)
 
         if edge_type is EdgeType.OUT:
@@ -287,8 +286,7 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
             graph.del_edge(neighbour, node)
 
         print(
-            f'\tConflict with other trips ({other_trips}) on {conflict_days}\n'
-        )
+            f'\tConflict with other trips ({other_trips}) on {conflict_days}\n')
 
     residual_days = node.days.difference(union_cases)
     if residual_days:

@@ -112,8 +112,7 @@ class ServiceDays:
     @staticmethod
     def get_reverse_index(days_by_service):
         return {
-            days: service_id
-            for service_id, days in days_by_service.items()
+            days: service_id for service_id, days in days_by_service.items()
         }
 
     def days_by_trip(self, trip, extra_shift=0):

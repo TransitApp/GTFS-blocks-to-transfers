@@ -5,8 +5,8 @@ from collections import namedtuple
 from .editor.schema import Transfer, DAY_SEC
 from . import config, service_days
 
-BlockConvertState = namedtuple(
-    'BlockConvertState', ('gtfs', 'services', 'shape_similarity_results'))
+BlockConvertState = namedtuple('BlockConvertState',
+                               ('gtfs', 'services', 'shape_similarity_results'))
 
 
 class TripConvertState:

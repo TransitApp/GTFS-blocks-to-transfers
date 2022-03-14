@@ -109,8 +109,7 @@ class Entity:
 
     def __repr__(self):
         filtered_dict = {
-            k: v
-            for k, v in self.__dict__.items() if k not in {'_gtfs'}
+            k: v for k, v in self.__dict__.items() if k not in {'_gtfs'}
         }
         return f'{self.__class__.__name__} {repr(filtered_dict)}'
 

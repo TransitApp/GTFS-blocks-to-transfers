@@ -157,8 +157,8 @@ def flatten_entities(file_schema, entities):
     if file_schema.group_id:
         flat_entities = []
         for entity_list in entities.values():
-            flat_entities.extend(entity_list.values() if file_schema.
-                                 inner_dict else entity_list)
+            flat_entities.extend(
+                entity_list.values() if file_schema.inner_dict else entity_list)
         return flat_entities
     else:
         return entities.values()
