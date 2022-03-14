@@ -66,6 +66,13 @@ class GTFSDate(datetime):
         return repr(self)
 
 
+class EntityDict(dict):
+
+    def __init__(self, fields, values=None):
+        super().__init__(values if values else [])
+        self._resolved_fields = fields
+
+
 class Entity:
 
     def __init__(self, **kwargs):

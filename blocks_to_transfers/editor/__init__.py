@@ -2,17 +2,17 @@ import csv
 import enum
 import shutil
 from pathlib import Path
-from .types import Entity
-from .schema import GTFS_SUBSET_SCHEMA
+from . import schema_classes, types, schema
 
 
 def load(gtfs_dir):
     gtfs_dir = Path(gtfs_dir)
-    gtfs = Entity()
-    for file_schema in GTFS_SUBSET_SCHEMA.values():
+    gtfs = types.Entity()
+    for file_schema in schema.GTFS_SUBSET_SCHEMA.values():
         print(f'Loading {file_schema.name}')
         filepath = gtfs_dir / file_schema.filename
-        gtfs[file_schema.name] = {}
+        gtfs[file_schema.name] = types.EntityDict(
+            file_schema.get_declared_fields())
 
         if not filepath.exists():
             if file_schema.required:
@@ -31,32 +31,38 @@ def load(gtfs_dir):
                 else:
                     continue
 
-            merge_with_defined_fields(file_schema, header_row)
+            resolved_fields = merge_header_and_declared_fields(
+                file_schema, header_row)
             entities = {}
-            for entity in parse_rows(gtfs, file_schema, header_row, reader):
+            for entity in parse_rows(gtfs, file_schema, resolved_fields,
+                                     header_row, reader):
                 index_entity(file_schema, entities, entity)
 
-            gtfs[file_schema.name] = sorted_entities(file_schema, entities)
+            gtfs[file_schema.name] = types.EntityDict(fields=resolved_fields,
+                                                      values=sorted_entities(
+                                                          file_schema,
+                                                          entities))
 
     return gtfs
 
 
-def merge_with_defined_fields(file_schema, header_row):
-    fields = file_schema.get_fields()
-    for name, config in fields.items():
-        if config.required and name not in header_row:
+def merge_header_and_declared_fields(file_schema, header_row):
+    declared_fields = file_schema.get_declared_fields()
+    fields = {}
+
+    for name in header_row:
+        fields[name] = declared_fields.get(name) or schema_classes.Field(
+            str, False, '')
+
+    for name, config in declared_fields.items():
+        if config.required and name not in fields:
             raise ValueError(
                 f'{file_schema.filename}:1: missing required field {name}')
 
-    for name in header_row:
-        if name not in fields:
-            # Create a string attribute to hold the field we discovered in the CSV file
-            setattr(file_schema.class_def, name, '')
-            file_schema.class_def.__annotations__[name] = str
+    return fields
 
 
-def parse_rows(gtfs, file_schema, header_row, reader):
-    fields = file_schema.get_fields()
+def parse_rows(gtfs, file_schema, fields, header_row, reader):
     for lineno, row in enumerate(reader, 2):
         entity = file_schema.class_def()
         entity._gtfs = gtfs
@@ -120,7 +126,7 @@ def sorted_entities(file_schema, entities):
             for group in entities.values():
                 group.sort(key=lambda entity: entity[file_schema.group_id])
 
-    return dict(sorted(entities.items(), key=lambda kv: kv[0]))
+    return sorted(entities.items(), key=lambda kv: kv[0])
 
 
 def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
@@ -135,14 +141,14 @@ def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
         except shutil.SameFileError:
             pass  # No need to copy if we're working in-place
 
-    for file_schema in GTFS_SUBSET_SCHEMA.values():
+    for file_schema in schema.GTFS_SUBSET_SCHEMA.values():
         print(f'Writing {file_schema.name}')
         entities = gtfs.get(file_schema.name)
         if not entities:
             continue
 
         flat_entities = flatten_entities(file_schema, entities)
-        fields = file_schema.get_fields()
+        fields = entities._resolved_fields
 
         with open(gtfs_out_dir / file_schema.filename, 'w',
                   encoding='utf-8') as f:

@@ -18,7 +18,8 @@ def export_visit(graph):
     stack.extend(graph.sources)
     visited = set()
     trip_id_splits = {}
-    transfers = {}
+    transfers = editor.types.EntityDict(
+        fields=graph.gtfs.transfers._resolved_fields)
 
     # Keep stop-to-stop transfers is the feed uses them
     transfers[''] = graph.gtfs.transfers.get('', {})

@@ -35,7 +35,7 @@ class File:
         # Will be set to point to the class defining this file
         self.class_def = None
 
-    def get_fields(self):
+    def get_declared_fields(self):
         return {
             k: Field(type=v,
                      required=k not in self.class_def.__dict__,
