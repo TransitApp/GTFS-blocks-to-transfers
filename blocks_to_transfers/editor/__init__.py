@@ -147,7 +147,8 @@ def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
         if not entities:
             continue
 
-        flat_entities = flatten_entities(file_schema, entities)
+        entities_sorted = dict(sorted_entities(file_schema, entities))
+        flat_entities = flatten_entities(file_schema, entities_sorted)
         fields = entities._resolved_fields
 
         with open(gtfs_out_dir / file_schema.filename, 'w',
