@@ -1,11 +1,11 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='GTFS-blocks-to-transfers',
-      version='1.0.0',
+      version='0.1.2',
       description='Convert GTFS blocks to trip-to-trip transfers',
-      url='https://github.com/TransitApp/block2transfers',
+      url='https://github.com/TransitApp/GTFS-blocks-to-transfers',
       author='Nicholas Paun',
       license='License :: OSI Approved :: MIT License',
-      packages=['blocks_to_transfers'],
+      packages=find_packages(),
       zip_safe=False,
       install_requires=[])

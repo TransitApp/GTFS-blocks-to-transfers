@@ -1,0 +1,63 @@
+stop_id,stop_name,stop_lat,stop_lon
+junction,"Osachoff at White",49.441632,-117.538984
+nelson-tc,"Ward St at Baker St",49.491833,-117.293763
+stanley-hart,"Stanley St at Hart St",49.479433,-117.284822
+slocan-park,"Hwy 6 at Slocan Park",49.517079,-117.625223
+winlaw,"Slocan River at Winlaw Bridge",49.616196,-117.566351
+slocan-city,"Harold St at Giffin",49.763303,-117.469690
+baker-falls,"Baker St at Falls St",49.490544,-117.297958
+bonnington,"Bonnington Rd",49.465133,-117.483513
+glade,"Hwy 3A at Glade",49.410577,-117.539891
+castlegar-tc,"Selkirk College",49.311015,-117.652372
+hall-mines-observatory,"Hall Mines at Observatory St",49.485485,-117.293320
+perrier,"Perrier Rd",49.469499,-117.287474
+stanley-carbonate,"Stanley St at Carbonate St",49.488828,-117.292937
+1-01,"Hart St at Falls St",49.478401,-117.287071
+1-02,"Stanley St at Silica St",49.489653,-117.293870
+1-03,"Falls St at Beasley St",49.479603,-117.288375
+1-04,"Stanley St at Mill St",49.488183,-117.292568
+1-05,"Falls St at Richards St",49.481111,-117.289704
+1-06,"Stanley St at Robson St",49.484868,-117.289671
+1-07,"Houston St at Kootenay St",49.482417,-117.289546
+1-08,"Stanley St at Innes St",49.483954,-117.288814
+1-09,"Houston St at Ward St",49.483436,-117.286748
+1-10,"Stanley St at Richards St",49.482136,-117.287146
+1-11,"Houston St at Josephine St",49.484200,-117.284796
+1-12,"Stanley St at Beasley St",49.480881,-117.286072
+1-13,"Houston St at Hall St",49.484788,-117.283323
+1-14,"Houston St at Cedar St",49.485513,-117.281148
+1-15,"Cottonwood St at 5th St",49.502219,-117.274749
+1-16,"Cedar St at Gore St",49.486968,-117.282161
+1-17,"Cottonwood St at 7th St",49.502197,-117.273164
+1-18,"Cedar St at Robson St",49.487793,-117.282914
+1-19,"Robson St at Hendryx St",49.487345,-117.284894
+1-20,"Robson St at Josephine St",49.486511,-117.287018
+1-21,"Josephine St at Hoover St",49.487765,-117.288377
+1-22,"Latimer St at Josephine St",49.488801,-117.288777
+1-23,"Hendryx St at Mill St",49.490383,-117.286967
+1-24,"Carbonate St at Cedar St",49.491494,-117.286850
+1-25,"View St at Carbonate St",49.492878,-117.285123
+1-26,"View St at Pine St",49.495031,-117.285222
+1-27,"Hendryx St at Mill St",49.490231,-117.287018
+1-28,"Latimer St at Josephine St",49.488817,-117.289017
+3-01,"Stanley St at Silica St",49.489653,-117.293870
+3-02,"Stanley St at Mill St",49.488183,-117.292568
+3-03,"Hall Mines at Observatory St",49.485485,-117.293320
+3-04,"Robertson at Observatory St",49.485134,-117.295043
+3-05,"W Innes St at Robertson",49.482158,-117.296671
+3-06,"W Innes St at McQuarrie",49.482150,-117.298896
+3-07,"W Innes St at Kary",49.482131,-117.301160
+3-08,"W Innes St at Crease",49.482156,-117.302471
+3-09,"Crease at W Houston St",49.481449,-117.303140
+3-10,"W Richards St",49.480069,-117.298824
+3-11,"Silver King at W Beasley St",49.478861,-117.296198
+3-12,"Silver King at Tower",49.476642,-117.295771
+3-13,"Silver King at W Beasley St",49.479058,-117.296094
+3-14,"Vancouver St at W Houston St",49.480581,-117.295262
+3-15,"Robertson at Observatory St",49.485048,-117.295166
+3-16,"Hall Mines at Hoover St",49.485932,-117.293046
+3-17,"Stanley St at Robson St",49.484868,-117.289671
+3-18,"Stanley St at Carbonate St",49.488828,-117.292937
+3-19,"Stanley St at Innes St",49.483954,-117.288814
+3-20,"Stanley St at Richards St",49.482136,-117.287146
+3-21,"Stanley St at Beasley St",49.480881,-117.286072
