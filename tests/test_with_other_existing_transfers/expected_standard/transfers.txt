@@ -1,0 +1,4 @@
+from_trip_id,to_trip_id,transfer_type,from_stop_id,to_stop_id
+trip_1,trip_2,4,,
+trip_3,trip_4,4,,
+trip_1,trip_5,1,slocan-city,slocan-city
