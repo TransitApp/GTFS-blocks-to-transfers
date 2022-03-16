@@ -157,7 +157,7 @@ def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
             writer.writerow(fields.keys())
             for entity in flat_entities:
                 writer.writerow(
-                    serialize_field(entity[name]) for name in fields)
+                    serialize_field(entity.get(name, '')) for name in fields)
 
 
 def flatten_entities(file_schema, entities):
