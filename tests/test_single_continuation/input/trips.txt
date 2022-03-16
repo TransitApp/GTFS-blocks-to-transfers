@@ -1,0 +1,5 @@
+route_id,trip_id,service_id,block_id
+red,trip_1,mon-tues-wed-thurs,1
+orange,trip_2,mon-tues-wed-thurs,1
+orange,trip_3,mon-tues-wed-thurs,2
+red,trip_4,mon-tues-wed-thurs,2

@@ -15,14 +15,13 @@ def export_visit(graph):
     """
     print('Exporting continuation graph')
     stack = collections.deque(graph.nodes)
-    stack.extend(graph.sources)
     visited = set()
     trip_id_splits = {}
     transfers = editor.types.EntityDict(
         fields=graph.gtfs.transfers._resolved_fields)
 
     # Keep stop-to-stop transfers is the feed uses them
-    transfers[''] = graph.gtfs.transfers.get('', {})
+    transfers[''] = graph.gtfs.transfers.get('', [])
 
     while stack:
         from_node = stack.pop()

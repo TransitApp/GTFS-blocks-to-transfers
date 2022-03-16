@@ -7,7 +7,7 @@ Usage: `./convert.py <input feed> <directory for output>`
 
 ## How it works
 
-Throughout this tool, sets of _service days_ are used to relate trips. They are defined in [service\_days.py](#), and are represented as a bitmap per `service_id`, with bit `n` set to 1 if that service operates on the `n`th day since the beginning of the feed. The term _trip's service days_ refers to the service days for `trip.service_id`. If the first departure of a trip is after `24:00:00`, the service days are stored _as-if_ the trip began the next day between `00:00:00` and `23:59:59`.
+Throughout this tool, sets of _service days_ are used to relate trips. They are defined in [`service_days.py`](#), and are represented as a bitmap per `service_id`, with bit `n` set to 1 if that service operates on the `n`th day since the beginning of the feed. The term _trip's service days_ refers to the service days for `trip.service_id`. If the first departure of a trip is after `24:00:00`, the service days are stored _as-if_ the trip began the next day between `00:00:00` and `23:59:59`.
 
 For each block defined in the feed, [`convert_blocks.py`](#) finds the most likely continuations for each trip, starting the search after the final arrival time of the trip. The program searches for a matching continuation for all of the trip's service days, greedily selecting continuation trips in order of wait time. Some days may remain unmatched if a configurable threshold is exceeded (`config.TripToTripTransfers.max_wait_time`). [`classify_transfers.py`](#) uses heuristics to assign `transfer_type=4` (in-seat transfer) or `transfer_type=5` to each continuation.
 
