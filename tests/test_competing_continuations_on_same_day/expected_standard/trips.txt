@@ -1,0 +1,5 @@
+route_id,trip_id,service_id,block_id
+3,loop,fri-sat,block_1
+99,trip_1,mon-tues-wed-thurs-fri-sat,block_1
+99,trip_3_b2t:if_fri-sat,fri-sat,block_1
+99,trip_3_b2t:if_mon-tues-wed-thurs,mon-tues-wed-thurs,block_1
