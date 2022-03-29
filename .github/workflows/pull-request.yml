@@ -11,7 +11,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: [self-hosted, linux, ci-transitapp]
+    runs-on: [ubuntu-latest]
     strategy:
       matrix:
         python-version: [pypy-3.7]
