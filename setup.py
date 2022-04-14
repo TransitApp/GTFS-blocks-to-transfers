@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='GTFS-blocks-to-transfers',
-      version='1.0.0',
+      version='1.1.0',
       description='Convert GTFS blocks to trip-to-trip transfers',
       url='https://github.com/TransitApp/GTFS-blocks-to-transfers',
       author='Nicholas Paun',
