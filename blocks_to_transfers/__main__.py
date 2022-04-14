@@ -1,7 +1,8 @@
 import argparse
 import os
 import shutil
-from . import convert_blocks, editor, service_days, classify_transfers, simplify_graph, simplify_linear, simplify_export
+import json
+from . import convert_blocks, config, editor, service_days, classify_transfers, simplify_graph, simplify_linear, simplify_export
 
 
 def process(in_dir,
@@ -29,6 +30,12 @@ def process(in_dir,
     print('Done.')
 
 
+def apply_config(config_override_str):
+    config_override = json.loads(config_override_str)
+    for section, options in config_override.items():
+        for k, v in options.items():
+            setattr(config.__dict__[section], k, v)
+
 def main():
     cmd = argparse.ArgumentParser(
         description=
@@ -43,6 +50,9 @@ def main():
         '--remove-existing-files',
         action='store_true',
         help='Remove all files in the output directory before expoting')
+    cmd.add_argument('-c', '--config', 
+            default='{}',
+            help='Set config overrides in JSON (see config.py for options)')
     args = cmd.parse_args()
 
     if os.environ.get('VSCODE_DEBUG'):
@@ -51,6 +61,7 @@ def main():
         debugpy.listen(5678)
         debugpy.wait_for_client()
 
+    apply_config(args.config)
     process(args.feed,
             args.out_dir,
             use_simplify_linear=args.linear,
