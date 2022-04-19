@@ -181,7 +181,7 @@ def consider_transfer(data, trip_state, cont_trip):
                     _rank=trip_state.num_matches)
 
 
-KM_H_FACTOR = 3.6
+KM_H_FACTOR = 3.6  # Conversion factor between m/s and km/h
 
 
 def reasonable_deadheading_speed(trip, cont_trip, wait_time, debug_context):
