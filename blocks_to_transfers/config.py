@@ -3,6 +3,12 @@ class TripToTripTransfers:
     # Maximum layover between a trip and its continuation
     max_wait_time = 1200  # seconds
 
+    # Maximum speed of travel between last stop of trip and first stop of its continuation
+    max_deadheading_speed = 50  # km/h
+
+    # At smaller deadheading distances, speed will be ignored
+    max_nearby_deadheading_distance = 500  # m
+
     # If a block is invalid because it cannot be operated using a single vehicle, because a later trip departs before
     # the previous trip has completed, should the algorithm still attempt to find a plausible continuation trip?
     force_allow_invalid_blocks = False
