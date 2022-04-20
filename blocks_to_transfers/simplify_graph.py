@@ -72,7 +72,10 @@ class Graph:
 
         target_node = to_node
         new_days = days.intersection(target_node.days)
-        assert len(new_days) > 0
+
+        if len(new_days) == 0:
+            self.del_edge(from_node, to_node)
+            return None
 
         target_node.days = target_node.days.difference(new_days)
         assert len(target_node.days) > 0
@@ -168,7 +171,8 @@ def split_ordered_alternatives(graph):
                 # Always smaller than the original set after this step, as the
                 # two sets weren't disjoint.
                 to_node_split = graph.split(from_node, to_node, days_when_best)
-                queue.append(to_node_split)
+                if to_node_split:
+                    queue.append(to_node_split)
 
             days_matched = days_matched.union(days_when_best)
             queue.append(to_node)
@@ -257,8 +261,13 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
                 neighbour.trip, node.trip, neighbour.days)
 
         if match_days in distinct_cases:
-            node.composite = True
-            continue
+            if not hasattr(transfer, '_rank'):
+                # Only transfers in transfers.txt will ever represent join/split
+                # If this case is encountered from converted blocks, it means
+                # the source data was invalid, and we need to erase this 
+                # transfer.
+                node.composite = True
+                continue
 
         if match_days.isdisjoint(union_cases):
             union_cases = union_cases.union(match_days)
