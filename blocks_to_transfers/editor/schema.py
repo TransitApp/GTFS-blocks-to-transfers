@@ -146,6 +146,10 @@ class StopTime(Entity):
     arrival_time: GTFSTime = GTFSTime('')
     departure_time: GTFSTime = GTFSTime('')
 
+    @property
+    def stop(self):
+        return self._gtfs.stops[self.stop_id]
+
 
 GTFS_SUBSET_SCHEMA = Schema(Calendar, CalendarDate, Trip, Stop, Transfer,
                             StopTime)
