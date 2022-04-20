@@ -35,11 +35,13 @@ def check_file(expected_filename, actual_filename):
 def test_standard(feed_dir):
     do_test(feed_dir, 'standard')
 
+
 @pytest.mark.parametrize('feed_dir',
                          find_tests('linear'),
                          ids=lambda test_dir: test_dir.name)
 def test_linear(feed_dir):
     do_test(feed_dir, 'linear')
+
 
 def do_test(feed_dir, simplification):
     work_dir = Path(tempfile.mkdtemp(prefix='', dir=WORK_DIR))

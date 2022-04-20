@@ -4,6 +4,7 @@ For every trip within a block, identifies valid continuation trips on each day o
 from collections import namedtuple
 from .editor.schema import Transfer, DAY_SEC
 from . import config, service_days
+from .logs import Warn
 import math
 
 BlockConvertState = namedtuple('BlockConvertState',
@@ -32,8 +33,8 @@ def convert(gtfs, services):
 
         try:
             converted_transfers.extend(convert_block(data, trips))
-        except InvalidBlockError as exc:
-            print(str(exc))
+        except Warn as exc:
+            exc.print()
 
     return converted_transfers
 
@@ -48,9 +49,8 @@ def group_trips(gtfs):
             continue
 
         if len(gtfs.stop_times.get(trip.trip_id, [])) < 2:
-            print(
-                f'Warning: Trip {trip.trip_id} deleted as it has fewer than two stops.'
-            )
+            Warn(f'Trip {trip.trip_id} deleted as it has fewer than two stops.'
+                ).print()
             continue
 
         if config.InSeatTransfers.ignore_return_via_similar_trip:
@@ -105,26 +105,6 @@ def convert_block(data, trips):
     return converted_transfers
 
 
-class InvalidBlockError(ValueError):
-
-    def __init__(self, trip, cont_trip, debug_context):
-        super().__init__(self, 'Invalid block')
-        self.trip = trip
-        self.cont_trip = cont_trip
-        self.debug_context = debug_context
-
-    def __str__(self):
-        wait_time = self.cont_trip.first_departure - self.trip.last_arrival
-        block_id = self.trip.block_id
-
-        return f'''
-        Warning: Block {block_id} is invalid:
-                {self.trip.first_departure} - {self.trip.last_arrival} [{self.trip.trip_id}]
-                {self.cont_trip.first_departure} - {self.cont_trip.last_arrival} [{self.cont_trip.trip_id}]
-                In two places at once for {abs(wait_time)} s on days {self.debug_context}.
-        '''
-
-
 def consider_transfer(data, trip_state, cont_trip):
     wait_time = cont_trip.first_departure - trip_state.trip.last_arrival
 
@@ -154,13 +134,16 @@ def consider_transfer(data, trip_state, cont_trip):
     # We know that trip and cont_trip operate together on at least one day, and yet there's no way a single
     # vehicle can do this.
     if wait_time < 0:
-        block_error = InvalidBlockError(
-            trip_state.trip,
-            cont_trip,
-            debug_context=data.services.pdates(days_when_best))
+        debug_context = data.services.pdates(days_when_best)
+        block_error = Warn(f'''
+        Block {trip_state.trip.block_id} is invalid:
+                {trip_state.trip.first_departure} - {trip_state.trip.last_arrival} [{trip_state.trip.trip_id}]
+                {cont_trip.first_departure} - {cont_trip.last_arrival} [{cont_trip.trip_id}]
+                In two places at once for {abs(wait_time)} s on days {debug_context}.
+        ''')
 
         if config.TripToTripTransfers.force_allow_invalid_blocks:
-            print(block_error)
+            block_error.print()
             return None
         else:
             raise block_error
@@ -192,12 +175,12 @@ def reasonable_deadheading_speed(trip, cont_trip, wait_time, debug_context):
     speed = KM_H_FACTOR * dist / wait_time if wait_time else math.inf
 
     if speed > config.TripToTripTransfers.max_deadheading_speed:
-        print(f'''
-        Warning: Block {trip.block_id} is invalid:
+        Warn(f'''
+        Block {trip.block_id} is invalid:
                 {trip.first_departure} - {trip.last_stop_time.stop.stop_name} @ {trip.last_arrival} [{trip.trip_id}]
                 {cont_trip.first_stop_time.stop.stop_name} @ {cont_trip.first_departure} - {cont_trip.last_arrival} [{cont_trip.trip_id}]
                 Would require travelling {dist/1000:.2f} km at {speed:.0f} km/h on days {debug_context}.
-        ''')
+        ''').print()
         return False
 
     return True

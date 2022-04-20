@@ -5,6 +5,7 @@ between trips, verify conditions and transform the representation.
 import collections
 import enum
 from . import service_days
+from .logs import Warn
 
 
 def simplify(gtfs, services, generated_transfers):
@@ -185,9 +186,8 @@ def import_predefined_transfers(graph, primary_nodes):
 
         for transfer in transfers:
             if transfer.from_trip_id == transfer.to_trip_id:
-                print(
-                    f'WARNING: Removed self-transfer for trip {transfer.from_trip_id}'
-                )
+                Warn(f'Removed self-transfer for trip {transfer.from_trip_id}'
+                    ).print()
                 continue
 
             if not transfer.is_continuation:
@@ -217,9 +217,9 @@ def delete_impossible_edges(graph, print_warnings):
             match_days = to_node_days.intersection(from_node.days)
             if not match_days:
                 if print_warnings:
-                    print(
-                        f'WARNING: Removing {from_node.trip_id} -> {to_node.trip_id} as it does not occur on any days of service.'
-                    )
+                    Warn(
+                        f'Removing {from_node.trip_id} -> {to_node.trip_id} as it does not occur on any days of service.'
+                    ).print()
                 graph.del_edge(from_node, to_node)
 
 
@@ -264,7 +264,7 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
             if not hasattr(transfer, '_rank'):
                 # Only transfers in transfers.txt will ever represent join/split
                 # If this case is encountered from converted blocks, it means
-                # the source data was invalid, and we need to erase this 
+                # the source data was invalid, and we need to erase this
                 # transfer.
                 node.composite = True
                 continue
@@ -284,18 +284,16 @@ def validate_distinct_cases(graph, edge_type, node, neighbours):
                                 if other_node is not neighbour)
 
         if edge_type is EdgeType.OUT:
-            print(
-                f'WARNING: Removing {node.trip_id} [*] -> {neighbour.trip_id} as it does not represent a disjoint case.'
-            )
+            description = f"Out edge of {node.trip_id} -> {neighbour.trip_id}"
             graph.del_edge(node, neighbour)
         else:
-            print(
-                f'WARNING: Removing {neighbour.trip_id} -> {node.trip_id} [*] as it does not represent a disjoint case.'
-            )
+            description = f"{neighbour.trip_id} -> In edge of {node.trip_id}"
             graph.del_edge(neighbour, node)
 
-        print(
-            f'\tConflict with other trips ({other_trips}) on {conflict_days}\n')
+        Warn(f'''
+            Removing {description} as it does not represent a disjoint case.
+                Conflict with other trips ({other_trips}) on {conflict_days}
+        ''').print()
 
     residual_days = node.days.difference(union_cases)
     if residual_days:
