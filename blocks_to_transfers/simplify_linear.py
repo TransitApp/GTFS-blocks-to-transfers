@@ -1,7 +1,8 @@
 import collections
 import enum
-from blocks_to_transfers import simplify_graph
-from blocks_to_transfers.service_days import ServiceDays
+from . import simplify_graph
+from .service_days import ServiceDays
+from .logs import Warn
 
 
 def simplify(graph):
@@ -58,9 +59,6 @@ def break_cycles(graph):
 
             # Cycle: edge is removed, days along edge reassigned to sink node
             # of from_node and source node of to_node
-            print(
-                f'Cycle {to_node.trip_id} -> ... -> {from_node.trip_id} -> {to_node.trip_id} [{graph.services.pdates(match_days)}]'
-            )
             graph.del_edge(from_node, to_node)
 
             match_days_reshifted = match_days.shift(-shift_days)
@@ -71,12 +69,12 @@ def break_cycles(graph):
             to_node.source_node.days = to_node.source_node.days.union(
                 match_days)
             graph.sources.add(to_node.source_node)
-            print(
-                f'\tResolved {from_node.trip_id} -> {from_node.sink_node.trip_id} [{graph.services.pdates(from_node.sink_node.days)}]'
-            )
-            print(
-                f'\tResolved {to_node.source_node.trip_id} -> {to_node.trip_id} [{graph.services.pdates(to_node.source_node.days)}]'
-            )
+
+            Warn(f'''
+                Cycle {to_node.trip_id} -> ... -> {from_node.trip_id} -> {to_node.trip_id} [{graph.services.pdates(match_days)}]
+                Resolved {from_node.trip_id} -> {from_node.sink_node.trip_id} [{graph.services.pdates(from_node.sink_node.days)}]
+                Resolved {to_node.source_node.trip_id} -> {to_node.trip_id} [{graph.services.pdates(to_node.source_node.days)}]
+            ''').print()
 
 
 class Transition:
@@ -138,9 +136,9 @@ def find_paths(graph):
 
             if to_node.composite:
                 # Acts like it were a sink node and ends the block
-                print(
+                Warn(
                     f'Composite node {to_node.trip_id} will not be split along {from_node.trip_id} -> {to_node.trip_id}'
-                )
+                ).print()
                 add_path_to_graph(transformed_graph,
                                   last_transition=to_transition,
                                   days=match_days)
