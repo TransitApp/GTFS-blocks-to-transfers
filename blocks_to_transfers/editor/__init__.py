@@ -59,6 +59,8 @@ def merge_header_and_declared_fields(file_schema, header_row):
             raise ValueError(
                 f'{file_schema.filename}:1: missing required field {name}')
 
+        fields.setdefault(name, config)
+
     return fields
 
 

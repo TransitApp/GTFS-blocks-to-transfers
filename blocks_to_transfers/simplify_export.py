@@ -75,15 +75,16 @@ def split_noncontinuation_transfers(gtfs, trip_id_splits, transfers):
 
 
 def make_trip(graph, trip_id_splits, node):
-    service_id = graph.services.get_or_assign(node.trip, node.days)
     splits = trip_id_splits.setdefault(node.trip_id, set())
 
-    if node.trip.service_id == service_id:
-        # If the service_id did not change, avoid cloning the trip to minimize diffs
+    trip_original_days = graph.services.days_by_service[node.trip.service_id]
+    if trip_original_days == node.days:
+        # If the days of service did not change, avoid cloning the trip to minimize diffs
         splits.add(node.trip_id)
         return node.trip_id
 
     # Other trips are named according to a standard form
+    service_id = graph.services.get_or_assign(node.trip, node.days)
     split_trip_id = f'{node.trip_id}_b2t:if_{service_id}'
     if split_trip_id not in graph.gtfs.trips:
         editor.clone(graph.gtfs.trips, node.trip_id, split_trip_id)
