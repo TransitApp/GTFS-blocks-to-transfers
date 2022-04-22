@@ -27,7 +27,7 @@ class InSeatTransfers:
     # Used to:
     #   - Discard in-seat transfers where the last stop of previous trip and first stop of ensuing trip are further apart than this distance
     #   - Calculate whether or not a trip is a return trip of the previous trip
-    same_location_distance = 100  # meters
+    same_location_distance = 500  # meters
 
     # If true, ignore all trips serving the same route in the opposite direction
     ignore_return_via_same_route = False
