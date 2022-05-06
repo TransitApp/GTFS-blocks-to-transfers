@@ -42,3 +42,8 @@ class InSeatTransfers:
     # The provided constants work best in urban areas, but are far from perfect even there.
     similarity_percentile = .8  # / 1.0
     similarity_distance = 100  # meters
+
+    # A list of stop names at which in-seat transfers are never permitted. At these locations, continuations will
+    # always be classified as vehicle continuation only (transfer_type=5)
+    banned_stops = []
+

@@ -40,6 +40,13 @@ def get_transfer_type(gtfs, shape_match, transfer):
     if wait_time > config.InSeatTransfers.max_wait_time:
         return TransferType.VEHICLE_CONTINUATION
 
+    # transfer involves a banned stop
+    if (trip.last_stop_time.stop.stop_name
+            in config.InSeatTransfers.banned_stops or
+            cont_trip.first_stop_time.stop.stop_name
+            in config.InSeatTransfers.banned_stops):
+        return TransferType.VEHICLE_CONTINUATION
+
     # cont_trip resumes too far away from where trip ended (probably involves deadheading)
     if trip.last_point.distance_to(
             cont_trip.first_point
