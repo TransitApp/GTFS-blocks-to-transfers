@@ -170,7 +170,7 @@ def reasonable_deadheading_speed(trip, cont_trip, wait_time, debug_context):
         Block {trip.block_id} is invalid - attempting auto-fix:
             | {trip.first_departure} {trip.first_stop_time.stop.stop_name} [trip {trip.trip_id}]
             v {trip.last_arrival} {trip.last_stop_time.stop.stop_name} [trip {trip.trip_id}]
-                (!) Would require travelling {dist/1000:.2f} km at {speed:.0f} km/h (!)
+            \t(!) Would require travelling {dist/1000:.2f} km at {speed:.0f} km/h (!)
             | {cont_trip.first_departure} {cont_trip.first_stop_time.stop.stop_name} [trip {cont_trip.trip_id}] 
             v {cont_trip.last_arrival} {cont_trip.last_stop_time.stop.stop_name} [trip {cont_trip.trip_id}]
             
