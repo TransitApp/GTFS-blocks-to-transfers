@@ -66,10 +66,15 @@ def main():
         debugpy.wait_for_client()
 
     apply_config(args.config)
-    process(args.feed,
-            args.out_dir,
-            use_simplify_linear=args.linear,
-            remove_existing_files=args.remove_existing_files)
+    try:
+        process(args.feed,
+                args.out_dir,
+                use_simplify_linear=args.linear,
+                remove_existing_files=args.remove_existing_files)
+    except editor.ParseError as exc:
+        # Skip backtrace for common issues with the input GTFS feed
+        print('ParseError', exc)
+        sys.exit(1)
 
     if logs.Warn.any_warnings:
         sys.exit(2)
