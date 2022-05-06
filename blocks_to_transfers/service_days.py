@@ -170,7 +170,7 @@ class ServiceDays:
 
 
 def pdates(dates):
-    sdates = sorted(date.strftime('%m%d') for date in dates)
+    sdates = sorted(date.strftime('%m-%d') for date in dates)
     tdates = ', '.join(sdates[:14])
     if len(dates) > 14:
         tdates += ' ...'

@@ -80,7 +80,7 @@ def parse_rows(gtfs, file_schema, fields, header_row, reader):
                 config,
                 value,
                 context_fn=lambda:
-                f'{file_schema}:{lineno} field {name} = {repr(value)}')
+                f'{file_schema.filename}:{lineno} field {name} = {repr(value)}')
 
         yield entity
 
@@ -89,7 +89,7 @@ def validate(config, value, context_fn):
     try:
         return convert(config, value)
     except Exception as exc:
-        raise ValueError(f'{context_fn()}: {exc.args[0]}')
+        raise ValueError(f'{context_fn()}: {exc.args[0]}') from None
 
 
 def convert(config, value):

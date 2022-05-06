@@ -135,10 +135,11 @@ def consider_transfer(data, trip_state, cont_trip):
     # vehicle can do this.
     if wait_time < 0:
         debug_context = data.services.pdates(days_when_best)
+        action = 'attempting auto-fix' if config.TripToTripTransfers.force_allow_invalid_blocks else 'deleted'
         block_error = Warn(f'''
-        Block {trip_state.trip.block_id} is invalid:
-                {trip_state.trip.first_departure} - {trip_state.trip.last_arrival} [{trip_state.trip.trip_id}]
-                {cont_trip.first_departure} - {cont_trip.last_arrival} [{cont_trip.trip_id}]
+        Block {trip_state.trip.block_id} is invalid - {action}:
+                {trip_state.trip.first_departure} -> {trip_state.trip.last_arrival} [trip {trip_state.trip.trip_id}]
+                {cont_trip.first_departure} -> {cont_trip.last_arrival} [trip {cont_trip.trip_id}]
                 In two places at once for {abs(wait_time)} s on days {debug_context}.
         ''')
 
@@ -176,9 +177,9 @@ def reasonable_deadheading_speed(trip, cont_trip, wait_time, debug_context):
 
     if speed > config.TripToTripTransfers.max_deadheading_speed:
         Warn(f'''
-        Block {trip.block_id} is invalid:
-                {trip.first_departure} - {trip.last_stop_time.stop.stop_name} @ {trip.last_arrival} [{trip.trip_id}]
-                {cont_trip.first_stop_time.stop.stop_name} @ {cont_trip.first_departure} - {cont_trip.last_arrival} [{cont_trip.trip_id}]
+        Block {trip.block_id} is invalid - attempting auto-fix:
+                {trip.first_stop_time.stop.stop_name} @ {trip.first_departure} -> {trip.last_stop_time.stop.stop_name} @ {trip.last_arrival} [trip {trip.trip_id}]
+                {cont_trip.first_stop_time.stop.stop_name} @ {cont_trip.first_departure} -> {trip.last_stop_time.stop.stop_name} @ {cont_trip.last_arrival} [trip {cont_trip.trip_id}]
                 Would require travelling {dist/1000:.2f} km at {speed:.0f} km/h on days {debug_context}.
         ''').print()
         return False
