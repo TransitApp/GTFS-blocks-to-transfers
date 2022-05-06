@@ -133,20 +133,11 @@ def consider_transfer(data, trip_state, cont_trip):
 
     # We know that trip and cont_trip operate together on at least one day, and yet there's no way a single
     # vehicle can do this.
-    if wait_time < 0:
-        debug_context = data.services.pdates(days_when_best)
-        block_error = Warn(f'''
-        Block {trip_state.trip.block_id} is invalid:
-                {trip_state.trip.first_departure} - {trip_state.trip.last_arrival} [{trip_state.trip.trip_id}]
-                {cont_trip.first_departure} - {cont_trip.last_arrival} [{cont_trip.trip_id}]
-                In two places at once for {abs(wait_time)} s on days {debug_context}.
-        ''')
-
-        if config.TripToTripTransfers.force_allow_invalid_blocks:
-            block_error.print()
-            return None
-        else:
-            raise block_error
+    if not valid_wait_time(trip_state.trip,
+                           cont_trip,
+                           wait_time,
+                           debug_context=data.services.pdates(days_when_best)):
+        return None
 
     if not reasonable_deadheading_speed(
             trip_state.trip,
@@ -176,11 +167,40 @@ def reasonable_deadheading_speed(trip, cont_trip, wait_time, debug_context):
 
     if speed > config.TripToTripTransfers.max_deadheading_speed:
         Warn(f'''
-        Block {trip.block_id} is invalid:
-                {trip.first_departure} - {trip.last_stop_time.stop.stop_name} @ {trip.last_arrival} [{trip.trip_id}]
-                {cont_trip.first_stop_time.stop.stop_name} @ {cont_trip.first_departure} - {cont_trip.last_arrival} [{cont_trip.trip_id}]
-                Would require travelling {dist/1000:.2f} km at {speed:.0f} km/h on days {debug_context}.
+        Block {trip.block_id} is invalid - attempting auto-fix:
+            | {trip.first_departure} {trip.first_stop_time.stop.stop_name} [trip {trip.trip_id}]
+            v {trip.last_arrival} {trip.last_stop_time.stop.stop_name} [trip {trip.trip_id}]
+            \t(!) Would require travelling {dist/1000:.2f} km at {speed:.0f} km/h (!)
+            | {cont_trip.first_departure} {cont_trip.first_stop_time.stop.stop_name} [trip {cont_trip.trip_id}] 
+            v {cont_trip.last_arrival} {cont_trip.last_stop_time.stop.stop_name} [trip {cont_trip.trip_id}]
+            
+            Occurs on days {debug_context}.
         ''').print()
         return False
 
     return True
+
+
+def valid_wait_time(trip, cont_trip, wait_time, debug_context):
+
+    def trip_desc(char, trip, time):
+        return f'{char} {time} [trip {trip.trip_id}]'
+
+    if wait_time >= 0:
+        return True
+
+    action = 'attempting auto-fix' if config.TripToTripTransfers.force_allow_invalid_blocks else 'deleted'
+    block_error = Warn(f'''
+        Block {trip.block_id} is invalid - {action}:
+            {trip_desc('|', trip, trip.first_departure):<60}\t\t{trip_desc('|', cont_trip, cont_trip.first_departure):<60} 
+            {trip_desc('v', trip, trip.last_arrival):<60}\t\t{trip_desc('v', cont_trip, cont_trip.last_arrival):<60}
+            \t\t(!) In two places at once for {abs(wait_time)} s (!)
+
+            Occurs on days {debug_context}.
+    ''')
+
+    if config.TripToTripTransfers.force_allow_invalid_blocks:
+        block_error.print()
+        return False
+    else:
+        raise block_error

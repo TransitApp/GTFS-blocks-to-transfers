@@ -5,6 +5,10 @@ from pathlib import Path
 from . import schema_classes, types, schema
 
 
+class ParseError(ValueError):
+    pass
+
+
 def load(gtfs_dir):
     gtfs_dir = Path(gtfs_dir)
     gtfs = types.Entity()
@@ -16,7 +20,7 @@ def load(gtfs_dir):
 
         if not filepath.exists():
             if file_schema.required:
-                raise ValueError(
+                raise ParseError(
                     f'{file_schema.filename}: required file is missing')
             else:
                 continue
@@ -26,7 +30,7 @@ def load(gtfs_dir):
             header_row = next(reader, None)
             if not header_row:
                 if file_schema.required:
-                    raise ValueError(
+                    raise ParseError(
                         f'{file_schema.filename}: required file is empty')
                 else:
                     continue
@@ -56,7 +60,7 @@ def merge_header_and_declared_fields(file_schema, header_row):
 
     for name, config in declared_fields.items():
         if config.required and name not in fields:
-            raise ValueError(
+            raise ParseError(
                 f'{file_schema.filename}:1: missing required field {name}')
 
         fields.setdefault(name, config)
@@ -72,7 +76,7 @@ def parse_rows(gtfs, file_schema, fields, header_row, reader):
         for name, value in zip(header_row, row):
             config = fields[name]
             if config.required and not value:
-                raise ValueError(
+                raise ParseError(
                     f'{file_schema.filename}:{lineno}: required field {name} is empty'
                 )
 
@@ -80,7 +84,7 @@ def parse_rows(gtfs, file_schema, fields, header_row, reader):
                 config,
                 value,
                 context_fn=lambda:
-                f'{file_schema}:{lineno} field {name} = {repr(value)}')
+                f'{file_schema.filename}:{lineno} field {name} = {repr(value)}')
 
         yield entity
 
@@ -89,7 +93,7 @@ def validate(config, value, context_fn):
     try:
         return convert(config, value)
     except Exception as exc:
-        raise ValueError(f'{context_fn()}: {exc.args[0]}')
+        raise ParseError(f'{context_fn()}: {exc.args[0]}') from None
 
 
 def convert(config, value):
