@@ -46,4 +46,3 @@ class InSeatTransfers:
     # A list of stop names at which in-seat transfers are never permitted. At these locations, continuations will
     # always be classified as vehicle continuation only (transfer_type=5)
     banned_stops = []
-

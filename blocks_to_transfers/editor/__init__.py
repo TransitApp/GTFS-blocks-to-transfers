@@ -1,6 +1,7 @@
 import csv
 import enum
 import shutil
+import typing
 from pathlib import Path
 from . import schema_classes, types, schema
 
@@ -97,16 +98,32 @@ def validate(config, value, context_fn):
 
 
 def convert(config, value):
-    if issubclass(config.type, enum.IntEnum):
-        if not config.required and not value:
-            return config.default
-        else:
-            return config.type(int(value))
+    if not config.required and value == '':
+        return config.default
 
-    if config.type is bool:
+    config_type = get_inner_type(config.type)
+    if issubclass(config_type, enum.IntEnum):
+        return config_type(int(value))
+
+    if config_type is bool:
         return bool(int(value))
 
-    return config.type(value)
+    return config_type(value)
+
+
+def get_inner_type(config_type):
+    if typing.get_origin(config_type) is not typing.Union:
+        return config_type
+
+    variants = typing.get_args(config_type)
+    if len(variants) != 2:
+        raise ValueError("Misconfigured type definition")
+
+    for variant in variants:
+        if not isinstance(None, variant):
+            return variant
+
+    raise ValueError("Misconfigured type definition")
 
 
 def index_entity(file_schema, entities, entity):
@@ -163,7 +180,7 @@ def patch(gtfs, gtfs_in_dir, gtfs_out_dir):
             writer.writerow(fields.keys())
             for entity in flat_entities:
                 writer.writerow(
-                    serialize_field(entity.get(name, '')) for name in fields)
+                    types.serialize(entity.get(name, '')) for name in fields)
 
 
 def flatten_entities(file_schema, entities):
@@ -175,15 +192,6 @@ def flatten_entities(file_schema, entities):
         return flat_entities
     else:
         return entities.values()
-
-
-def serialize_field(value):
-    if isinstance(value, (bool, enum.IntEnum)):
-        return str(
-            int(value)
-        )  # Use the numerical representation of this type in final output
-
-    return str(value)  # Direct conversion to string
 
 
 def clone(entities, key, new_key):

@@ -22,7 +22,6 @@ class TripConvertState:
 
 def convert(gtfs, services):
     print('Predicting continuation trip for trips within blocks')
-
     trips_by_block = group_trips(gtfs)
     converted_transfers = []
     data = BlockConvertState(gtfs, services, {})
