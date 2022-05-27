@@ -1,4 +1,7 @@
+import functools
+import enum
 from datetime import datetime
+from typing import Any
 
 
 class GTFSTime(int):
@@ -77,7 +80,6 @@ class Entity:
 
     def __init__(self, **kwargs):
         self._gtfs = None
-        self._saved_properties = {}
         default_init = {
             k: v
             for k, v in self.__class__.__dict__.items()
@@ -88,7 +90,7 @@ class Entity:
 
     @staticmethod
     def _is_field(k, v):
-        if callable(v):
+        if callable(v) or isinstance(v, functools.cached_property):
             return False
 
         return not k.startswith('_')
@@ -121,18 +123,28 @@ class Entity:
         return f'{self.__class__.__name__} {repr(filtered_dict)}'
 
     def clone(self, **overrides):
-        merged = self.__dict__.copy()
+        merged = {
+            k: v for k, v in self.__dict__.items() if Entity._is_field(k, v)
+        }
         merged.update(overrides)
-
         return self.__class__(**merged)
 
 
-def saved_property(compute_fn):
+@functools.singledispatch
+def serialize(value: Any):
+    return str(value)
 
-    def get_fn(self):
-        if compute_fn.__name__ not in self._saved_properties:
-            self._saved_properties[compute_fn.__name__] = compute_fn(self)
 
-        return self._saved_properties[compute_fn.__name__]
+@serialize.register
+def _(value: enum.IntEnum):
+    return str(int(value))
 
-    return property(get_fn)
+
+@serialize.register
+def _(value: bool):
+    return str(int(value))
+
+
+@serialize.register
+def _(value: None):
+    return ''

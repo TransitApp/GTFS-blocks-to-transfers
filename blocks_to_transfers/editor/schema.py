@@ -1,5 +1,7 @@
-from enum import IntEnum
 import math
+from enum import IntEnum
+from functools import cached_property
+from typing import Optional
 from .schema_classes import *
 from .types import *
 from ..shape_similarity import LatLon
@@ -68,26 +70,26 @@ class Trip(Entity):
         return tuple(self._gtfs.stops[st.stop_id].location
                      for st in self._gtfs.stop_times[self.trip_id])
 
-    @saved_property
+    @cached_property
     def shift_days(self):
         return 1 if self.first_stop_time.departure_time >= DAY_SEC else 0
 
-    @saved_property
+    @cached_property
     def first_departure(self):
         if self.trip_id not in self._gtfs.stop_times:
             return -math.inf
 
         return self.first_stop_time.departure_time - DAY_SEC * self.shift_days
 
-    @saved_property
+    @cached_property
     def last_arrival(self):
         return self.last_stop_time.arrival_time - DAY_SEC * self.shift_days
 
-    @saved_property
+    @cached_property
     def first_point(self):
         return self._gtfs.stops[self.first_stop_time.stop_id].location
 
-    @saved_property
+    @cached_property
     def last_point(self):
         return self._gtfs.stops[self.last_stop_time.stop_id].location
 
@@ -109,11 +111,14 @@ class Stop(Entity):
     _schema = File(id='stop_id', name='stops', required=True)
 
     stop_id: str
-    stop_lat: float
-    stop_lon: float
+    stop_lat: Optional[float] = None
+    stop_lon: Optional[float] = None
 
-    @property
+    @cached_property
     def location(self):
+        if self.stop_lat is None or self.stop_lon is None:
+            raise ValueError(f'Stop {self.stop_id} missing location')
+
         return LatLon(self.stop_lat, self.stop_lon)
 
 
