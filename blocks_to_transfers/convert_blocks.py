@@ -27,9 +27,6 @@ def convert(gtfs, services):
     data = BlockConvertState(gtfs, services, {})
 
     for trips in trips_by_block.values():
-        if not may_convert_trips(gtfs, trips):
-            continue
-
         try:
             converted_transfers.extend(convert_block(data, trips))
         except Warn as exc:
@@ -59,22 +56,6 @@ def group_trips(gtfs):
         trips_by_block.setdefault(trip.block_id, []).append(trip)
 
     return trips_by_block
-
-
-def may_convert_trips(gtfs, trips):
-    if config.TripToTripTransfers.overwrite_existing:
-        return True
-
-    for trip in trips:
-        transfers_out = gtfs.transfers.get(trip.trip_id)
-        if not transfers_out:
-            continue
-
-        for transfer in transfers_out:
-            if transfer.is_continuation:
-                return False
-
-    return True
 
 
 def convert_block(data, trips):

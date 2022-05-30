@@ -13,9 +13,6 @@ class TripToTripTransfers:
     # the previous trip has completed, should the algorithm still attempt to find a plausible continuation trip?
     force_allow_invalid_blocks = False
 
-    # If true, existing trip-to-trip transfers will be overwritten with predicted continuations from the algorithm
-    overwrite_existing = False
-
 
 # Controls whether an identified continuation is marked as an in-seat transfer, where riders are permitted to stay
 # onboard.
