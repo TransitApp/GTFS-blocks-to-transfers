@@ -1,0 +1,4 @@
+from_trip_id,to_trip_id,transfer_type
+1a,2a,4
+2a,3a,5
+3a,4x,4

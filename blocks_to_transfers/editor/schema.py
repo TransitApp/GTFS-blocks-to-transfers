@@ -138,6 +138,10 @@ class Transfer(Entity):
             TransferType.IN_SEAT, TransferType.VEHICLE_CONTINUATION
         }
 
+    @property
+    def is_generated(self):
+        return hasattr(self, '_rank')
+
 
 class StopTime(Entity):
     _schema = File(id='trip_id',

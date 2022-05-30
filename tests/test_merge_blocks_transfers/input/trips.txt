@@ -1,0 +1,6 @@
+trip_id,route_id,block_id,service_id
+1a,green,a,mon
+2a,green,a,mon
+3a,teal,a,mon
+4a,yellow,a,mon
+4x,pink,,mon

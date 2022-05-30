@@ -3,7 +3,7 @@ import os
 import shutil
 import json
 import sys
-from . import convert_blocks, config, editor, service_days, classify_transfers, simplify_graph, simplify_linear, simplify_export, logs
+from . import convert_blocks, config, editor, service_days, classify_transfers, simplify_fix, simplify_linear, simplify_export, logs
 
 
 def process(in_dir,
@@ -16,7 +16,7 @@ def process(in_dir,
     converted_transfers = convert_blocks.convert(gtfs, services)
     classify_transfers.classify(gtfs, converted_transfers)
 
-    graph = simplify_graph.simplify(gtfs, services, converted_transfers)
+    graph = simplify_fix.simplify(gtfs, services, converted_transfers)
 
     if use_simplify_linear:
         output_graph = simplify_linear.simplify(graph)
