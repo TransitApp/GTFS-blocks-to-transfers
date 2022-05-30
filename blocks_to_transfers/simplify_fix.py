@@ -12,10 +12,10 @@ def simplify(gtfs, services, generated_transfers):
     print('Merging with predefined transfers and validating against spec')
     graph = simplify_graph.Graph(gtfs, services)
     primary_nodes = {}
-    
+
     import_predefined_transfers(graph, primary_nodes)
     delete_impossible_edges(graph, print_warnings=True)
-    
+
     import_generated_transfers(graph, primary_nodes, generated_transfers)
     split_ordered_alternatives(graph)
     delete_impossible_edges(graph, print_warnings=False)
@@ -28,7 +28,8 @@ def simplify(gtfs, services, generated_transfers):
 
 def import_generated_transfers(graph, primary_nodes, generated_transfers):
     for transfer in generated_transfers:
-        from_node = graph.make_primary_node(primary_nodes, transfer.from_trip_id)
+        from_node = graph.make_primary_node(primary_nodes,
+                                            transfer.from_trip_id)
         if from_node.out_edges.has_predefined_transfers():
             # from_node already has some predefined transfer out edges
             continue
@@ -84,8 +85,6 @@ def split_ordered_alternatives(graph):
 
             days_matched = days_matched.union(days_when_best)
             queue.append(to_node)
-
-
 
 
 def import_predefined_transfers(graph, primary_nodes):
@@ -144,8 +143,10 @@ def validate(graph):
     in-edges for a certain day, it will be associated with the 'terminal node'.
     """
     for node in graph.nodes:
-        validate_distinct_cases(graph, simplify_graph.EdgeType.IN, node, node.in_edges)
-        validate_distinct_cases(graph, simplify_graph.EdgeType.OUT, node, node.out_edges)
+        validate_distinct_cases(graph, simplify_graph.EdgeType.IN, node,
+                                node.in_edges)
+        validate_distinct_cases(graph, simplify_graph.EdgeType.OUT, node,
+                                node.out_edges)
 
 
 def validate_distinct_cases(graph, edge_type, node, neighbours):

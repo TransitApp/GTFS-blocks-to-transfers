@@ -98,7 +98,8 @@ class Node(BaseNode):
 
         self.source_node = BaseNode(None, service_days.DaySet(), EdgeDict(),
                                     EdgeDict({self: None}))
-        self.sink_node = BaseNode(None, service_days.DaySet(), EdgeDict({self: None}), EdgeDict())
+        self.sink_node = BaseNode(None, service_days.DaySet(),
+                                  EdgeDict({self: None}), EdgeDict())
 
 
 class EdgeType(enum.Enum):
@@ -107,12 +108,14 @@ class EdgeType(enum.Enum):
 
 
 class EdgeDict(dict):
+
     def has_predefined_transfers(self):
-        return any(transfer and not transfer.is_generated for transfer in self.values())
+        return any(transfer and not transfer.is_generated
+                   for transfer in self.values())
 
     def generated_by_rank(self):
         return sorted(self._filter_generated(), key=lambda kv: kv[1]._rank)
-        
+
     def _filter_generated(self):
         for to_node, transfer in self.items():
             if not to_node.has_trip():
@@ -123,4 +126,3 @@ class EdgeDict(dict):
 
     def copy(self):
         return EdgeDict(super().copy())
-
