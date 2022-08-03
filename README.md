@@ -4,6 +4,11 @@ Converts GTFS blocks, defined by setting [trip.block\_id](https://github.com/goo
 
 Usage: `./convert.py <input feed> <directory for output>`
 
+## Install
+
+The easiest way to install the tool is to clone this repository, then run `pip install -e .`
+
+If that doesn't work, try to run `python3 manual_install.py`. 
 
 ## How it works
 
