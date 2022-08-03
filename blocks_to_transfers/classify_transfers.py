@@ -5,7 +5,7 @@ predict whether a transfer is most likely to be of type:
 4: In-seat transfer
 5: Vehicle continuation only (for operational reasons)
 """
-from .editor.schema import DAY_SEC, TransferType
+from gtfs_loader.schema import DAY_SEC, TransferType
 from . import config, shape_similarity
 
 

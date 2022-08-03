@@ -3,14 +3,15 @@ import os
 import shutil
 import json
 import sys
-from . import convert_blocks, config, editor, service_days, classify_transfers, simplify_fix, simplify_linear, simplify_export, logs
+import gtfs_loader
+from . import convert_blocks, config, service_days, classify_transfers, simplify_fix, simplify_linear, simplify_export, logs
 
 
 def process(in_dir,
             out_dir,
             use_simplify_linear=False,
             remove_existing_files=False):
-    gtfs = editor.load(in_dir)
+    gtfs = gtfs_loader.load(in_dir)
 
     services = service_days.ServiceDays(gtfs)
     converted_transfers = convert_blocks.convert(gtfs, services)
@@ -27,7 +28,7 @@ def process(in_dir,
     if remove_existing_files:
         shutil.rmtree(out_dir, ignore_errors=True)
 
-    editor.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir)
+    gtfs_loader.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir)
     print('Done.')
 
 
@@ -71,7 +72,7 @@ def main():
                 args.out_dir,
                 use_simplify_linear=args.linear,
                 remove_existing_files=args.remove_existing_files)
-    except editor.ParseError as exc:
+    except gtfs_loader.ParseError as exc:
         # Skip backtrace for common issues with the input GTFS feed
         print('ParseError', exc)
         sys.exit(1)
