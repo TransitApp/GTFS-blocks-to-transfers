@@ -41,7 +41,7 @@ def check_snapshot_update(expected_filename, expected_text, actual_text):
         return
 
     with open(expected_filename, 'w', encoding='utf-8') as f:
-        f.writelines(actual_text)
+        f.write('\n'.join(actual_text))
         print(f'Updated {expected_filename}')
 
 @pytest.mark.parametrize('feed_dir',
