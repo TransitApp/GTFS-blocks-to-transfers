@@ -70,7 +70,9 @@ def do_test(feed_dir, simplification):
     print(f'Testing feed in {work_dir}')
 
     blocks_to_transfers.__main__.process(
-        work_dir, work_dir, use_simplify_linear=(simplification == 'linear'))
+        work_dir, work_dir, 
+        use_simplify_linear=(simplification == 'linear'),
+        sorted_io=True)
 
     for expected_filename in (feed_dir /
                               f'expected_{simplification}').iterdir():

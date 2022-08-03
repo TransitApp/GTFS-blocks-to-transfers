@@ -1,1 +1,1 @@
-py_gtfs_loader = '0.0.3'
+py_gtfs_loader = '0.0.4'

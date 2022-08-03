@@ -10,8 +10,10 @@ from . import convert_blocks, config, service_days, classify_transfers, simplify
 def process(in_dir,
             out_dir,
             use_simplify_linear=False,
-            remove_existing_files=False):
-    gtfs = gtfs_loader.load(in_dir)
+            remove_existing_files=False,
+            sorted_io=False,
+            ):
+    gtfs = gtfs_loader.load(in_dir, sorted_read=sorted_io)
 
     services = service_days.ServiceDays(gtfs)
     converted_transfers = convert_blocks.convert(gtfs, services)
@@ -28,7 +30,9 @@ def process(in_dir,
     if remove_existing_files:
         shutil.rmtree(out_dir, ignore_errors=True)
 
-    gtfs_loader.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir)
+    gtfs_loader.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir, 
+            sorted_output=sorted_io)
+    
     print('Done.')
 
 
