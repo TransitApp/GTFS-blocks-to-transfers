@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime
 
-from blocks_to_transfers.editor.schema import CalendarDate, ExceptionType
-from blocks_to_transfers.editor.types import GTFSDate
+from gtfs_loader.schema import CalendarDate, ExceptionType
+from gtfs_loader.types import GTFSDate
 
 
 class DaySet(int):

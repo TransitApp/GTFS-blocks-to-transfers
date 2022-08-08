@@ -1,5 +1,5 @@
 import collections
-from . import editor
+import gtfs_loader
 
 
 def export_visit(graph):
@@ -17,7 +17,7 @@ def export_visit(graph):
     stack = collections.deque(graph.nodes)
     visited = set()
     trip_id_splits = {}
-    transfers = editor.types.EntityDict(
+    transfers = gtfs_loader.types.EntityDict(
         fields=graph.gtfs.transfers._resolved_fields)
 
     # Keep stop-to-stop transfers is the feed uses them
@@ -87,8 +87,8 @@ def make_trip(graph, trip_id_splits, node):
     service_id = graph.services.get_or_assign(node.trip, node.days)
     split_trip_id = f'{node.trip_id}_b2t:if_{service_id}'
     if split_trip_id not in graph.gtfs.trips:
-        editor.clone(graph.gtfs.trips, node.trip_id, split_trip_id)
-        editor.clone(graph.gtfs.stop_times, node.trip_id, split_trip_id)
+        gtfs_loader.clone(graph.gtfs.trips, node.trip_id, split_trip_id)
+        gtfs_loader.clone(graph.gtfs.stop_times, node.trip_id, split_trip_id)
         graph.gtfs.trips[split_trip_id].service_id = service_id
 
     splits.add(split_trip_id)

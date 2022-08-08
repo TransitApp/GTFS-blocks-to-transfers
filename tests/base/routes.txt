@@ -1,0 +1,10 @@
+route_id,route_short_name,agency_id,route_type,route_long_name
+3,3,GT,3,Rosemont
+99,99,GT,3,Kootenay Connector
+125,125,GT,3,Westwood Vill - S Seattle Coll - Seattle
+red,red,GT,0,Red line
+green,green,GT,0,Green line
+teal,teal,GT,0,Teal line
+yellow,yellow,GT,0,Yellow line
+pink,pink,GT,0,Pink line
+orange,orange,GT,0,Orange line

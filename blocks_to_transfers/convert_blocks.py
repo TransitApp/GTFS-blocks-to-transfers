@@ -2,7 +2,7 @@
 For every trip within a block, identifies valid continuation trips on each day of service.
 """
 from collections import namedtuple
-from .editor.schema import Transfer, DAY_SEC
+from gtfs_loader.schema import Transfer, DAY_SEC
 from . import config, service_days
 from .logs import Warn
 import math
