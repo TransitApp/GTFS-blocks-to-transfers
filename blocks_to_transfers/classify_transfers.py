@@ -7,6 +7,7 @@ predict whether a transfer is most likely to be of type:
 """
 from gtfs_loader.schema import DAY_SEC, TransferType
 from . import config, shape_similarity
+from .specific_rules import Operation
 
 
 class ShapeMatchState:
@@ -36,17 +37,16 @@ def get_transfer_type(gtfs, shape_match, transfer):
     if cont_trip.first_departure < trip.last_arrival:
         wait_time += DAY_SEC
 
+    specified_type = get_specific_cases_result(trip, cont_trip)
+    # a specific rule governs the type of this transfer
+    if specified_type is not None:
+        print('SP', transfer)
+        return specified_type
+
     # transfer would require riders to wait for an excessively long time
     if wait_time > config.InSeatTransfers.max_wait_time:
         return TransferType.VEHICLE_CONTINUATION
-
-    # transfer involves a banned stop
-    if (trip.last_stop_time.stop.stop_name
-            in config.InSeatTransfers.banned_stops or
-            cont_trip.first_stop_time.stop.stop_name
-            in config.InSeatTransfers.banned_stops):
-        return TransferType.VEHICLE_CONTINUATION
-
+   
     # cont_trip resumes too far away from where trip ended (probably involves deadheading)
     if trip.last_point.distance_to(
             cont_trip.first_point
@@ -98,3 +98,68 @@ def get_shape_ptr(shape_match, trip):
         trip.stop_shape, trip.stop_shape)
     shape_match.shape_ptr_by_trip[trip.trip_id] = shape_ptr
     return shape_ptr
+
+
+def get_specific_cases_result(trip, cont_trip):
+    """
+    Last matching rule wins. 
+    Returns None if no specific rule applies. Heuristics will be used in that case.
+    """
+
+    last_specified_type = None
+
+    for rule in config.SpecificCases:
+        specified_type = apply_specific_case(rule, trip, cont_trip)
+
+        if specified_type is not None:
+            last_specified_type = specified_type
+
+    return last_specified_type
+
+
+def apply_specific_case(rule, trip, cont_trip):
+    if rule.op != Operation.MODIFY:
+        # Other operations not yet implemented
+        return None
+
+    for selector in rule.match:
+        if selector_applies_to_trips(selector, trip, cont_trip):
+            return rule.transfer_type
+
+
+def selector_applies_to_trips(selector, trip, cont_trip):
+    if selector.all:
+        # "all" selectors always apply
+        return True
+
+    if selector.through:
+        # "through" selectors apply if they match either trip or cont_trip
+        return (
+                selector_applies(selector.through, trip, trip.last_stop) 
+                or selector_applies(selector.through, cont_trip, cont_trip.first_stop)
+                )
+
+    if not selector.from_trip and not selector.to_trip:
+        # Doesn't have any valid selectors
+        return False
+
+    if selector.from_trip:
+        if not selector_applies(selector.from_trip, trip, trip.last_stop):
+            return False
+
+    if selector.to_trip:
+        if not selector_applies(selector.to_trip, cont_trip, cont_trip.first_stop):
+            return False
+
+    return True
+
+
+def selector_applies(selector, trip, stop_to_check):
+    if selector.route is not None and selector.route != trip.route.route_short_name:
+        return False
+
+    if selector.stop is not None and selector.stop != stop_to_check.stop_name:
+        return False
+
+    return True
+

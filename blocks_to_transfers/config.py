@@ -1,3 +1,7 @@
+from .specific_rules import *
+from gtfs_loader.schema import TransferType
+
+
 # Controls whether two trips in a block will be interpreted as trip-to-trip transfers, or ignored
 class TripToTripTransfers:
     # Maximum layover between a trip and its continuation
@@ -40,6 +44,11 @@ class InSeatTransfers:
     similarity_percentile = .8  # / 1.0
     similarity_distance = 100  # meters
 
-    # A list of stop names at which in-seat transfers are never permitted. At these locations, continuations will
-    # always be classified as vehicle continuation only (transfer_type=5)
-    banned_stops = []
+SpecificCases = [
+        SpecificRule(match=[
+            MatchCriteria(from_trip=FromTripSelector(last_stop='Terminus Longueuil', route='1'), to_trip=ToTripSelector(first_stop='Terminus Longueuil', route='12'))
+        ], transfer_type=TransferType.VEHICLE_CONTINUATION)
+]
+
+
+
