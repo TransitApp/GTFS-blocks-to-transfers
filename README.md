@@ -37,6 +37,61 @@ Riders probably won't be able to, or want to, to stay on board if:
 You can adjust thresholds or entirely disable a heuristic in [`blocks_to_transfers/config.py`](#).
 
 
+## Special continuations
+
+Precise rules can also be added to enable or disable in-seat transfers for particular stops and routes within a feed. 
+
+A _rule_ is a JSON object consisting of three parts:
+
+- `match`: A list of _selectors_.
+- `op`: The action to take on matching predicted continuations.
+    - `modify`: Change the `transfer_type`.
+    - More operations are planned in the future.
+- `transfer_type`: Only for `modify` operations. The new `transfer_type` to assign,
+    - `4`: in-seat transfer
+    - `5`: vehicle continuation only
+
+The following _selectors_ are supported:
+
+- _All_ selectors will match any trip-to-trip transfers.
+    - Example: `{"all": true}`
+- _Through_ selectors will match either the `from_trip` or the `to_trip`.
+    - Example: `{"through": {"route": "1", "stop": "Terminus Longueuil"}}`
+    - You can specify a `route` (route short name), a `stop` (stop name), or both.
+- _From_ selectors will match on the `from_trip`.
+    - Example: `{"from": {"route": "20", "last_stop": "Osachoff / White"}}`
+    - You can specify a `route`, a `last_stop`, or both.
+- _To_ selectors will match on the `to_trip`.
+    - Example:  `{"to": {"route": "5T", "first_stop": "Stewart Creek"}}`
+- _From_ and _to_ selectors can be combined to match a particular continuation between two trips].
+    - Example: `{"from": {"route": "124", "last_stop": "3rd / Pine"}, "to": {"route": "26", "first_stop": "3rd / Pine"}}`
+
+When a transfer matches multiple rules, the last rule wins. For transfers predicted from blocks, special continuation rules override all heuristics except `max_wait_time`. Rules never apply to predefined transfers specified using `transfers.txt`
+
+For example, to enable in-seat transfers only for routes 20 and 99 the following configuration can be set:
+
+```json
+{
+    "SpecialContinuations": [
+        {
+            "match": [
+                {"all": true}
+            ],
+            "op": "modify",
+            "transfer_type": 5
+        },
+        {
+            "match": [
+                {"through": {"route": "20"}},
+                {"through": {"route": "99"}}
+            ],
+            "op": "modify"
+            "transfer_type": 4
+        }
+    ]
+} 
+```
+
 ## Advanced
 
 * `simplify_linear.py`: You probably don't want to enable this option, unless your system happens to have the same constraints described in this section. If enabled, trips will be split so that each trip has at most one incoming continuation, and at most one outgoing continuation. Where cycles exist (e.g. an automated people mover that serves trip 1 -> trip 2 -> trip 1 every day until the end of the feed), back edges are removed. Trips that decouple into multiple vehicles, or that are formed through the coupling of multiple vehicles are preserved as is. 
