@@ -1,6 +1,6 @@
 # gtfs-blocks-to-transfers
 
-Converts GTFS blocks, defined by setting [trip.block\_id](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#example-blocks-and-service-day) into a series of [trip-to-trip transfers (proposal)](https://github.com/google/transit/pull/303). Uses configurable heuristics  to predict whether two trips are connected as _in-seat transfers_ or as _vehicle continuations_ only. This tool also validates predefined trip-to-trip transfers in `transfers.txt`.
+Converts GTFS blocks, defined by setting [trip.block\_id](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#example-blocks-and-service-day) into a series of [trip-to-trip transfers (GTFS specification)](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#linked-trips). Uses configurable heuristics  to predict whether two trips are connected as _in-seat transfers_ or as _vehicle continuations_ only. This tool also validates predefined trip-to-trip transfers in `transfers.txt`.
 
 Usage: `./convert.py <input feed> <directory for output>`
 
@@ -34,8 +34,7 @@ Riders probably won't be able to, or want to, to stay on board if:
 * The wait time aboard the bus is quite long.
 * The next trip is very similar to the preceding trip, but in reverse. We assess similarity by comparing the sequence of stop locations of the two trips using a modified [Hausdorff metric](https://en.wikipedia.org/wiki/Hausdorff_distance).
 
-You can adjust thresholds or entirely disable a heuristic in [`blocks_to_transfers/config.py`](#).
-
+You can adjust thresholds or entirely disable a heuristic in [`blocks_to_transfers/config.py`](#). Configuration can also be provided as a JSON string with the `--config` argument.
 
 ## Special continuations
 

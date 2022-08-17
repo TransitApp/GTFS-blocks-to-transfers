@@ -19,11 +19,12 @@ def apply(config_override_str):
                 setattr(config.__dict__[section], k, v)
 
     for stop in config.InSeatTransfers.banned_stops:
-        config.SpecialContinuations.append(GetDict(
-            match=[GetDict(through=GetDict(stop=stop))],
-            op='modify',
-            transfer_type=5))
+        config.SpecialContinuations.append({
+            'match': [{'through': {'stop': stop}}],
+            'op': 'modify',
+            'transfer_type': 5})
 
+    config.SpecialContinuations = GetDict.convert_rec(config.SpecialContinuations)
 
 class GetDict(dict):
     """
@@ -42,3 +43,11 @@ class GetDict(dict):
     def __delattr__(self, k):
         del self[k]
 
+    @staticmethod
+    def convert_rec(data):
+        if isinstance(data, dict):
+            return GetDict((k, GetDict.convert_rec(v)) for k,v in data.items())
+        elif isinstance(data, list):
+            return [GetDict.convert_rec(v) for v in data]
+        else:
+            return data

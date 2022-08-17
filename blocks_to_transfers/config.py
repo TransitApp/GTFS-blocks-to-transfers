@@ -44,5 +44,11 @@ class InSeatTransfers:
     # always be classified as vehicle continuation only (transfer_type=5)
     banned_stops = []
 
-
-SpecialContinuations = []
+# See <https://github.com/TransitApp/GTFS-blocks-to-transfers/blob/master/README.md#special-continuations> for documentation
+SpecialContinuations = [
+#        {
+#            'match': {'through': {'route': 'R5'}},
+#            'op': 'modify',
+#            'transfer_type': 4
+#        }
+]
