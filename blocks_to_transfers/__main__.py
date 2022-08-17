@@ -4,7 +4,7 @@ import shutil
 import json
 import sys
 import gtfs_loader
-from . import convert_blocks, config, service_days, classify_transfers, simplify_fix, simplify_linear, simplify_export, logs
+from . import convert_blocks, config, service_days, classify_transfers, simplify_fix, simplify_linear, simplify_export, logs, runtime_config
 
 
 def process(in_dir,
@@ -36,13 +36,6 @@ def process(in_dir,
     print('Done.')
 
 
-def apply_config(config_override_str):
-    config_override = json.loads(config_override_str)
-    for section, options in config_override.items():
-        for k, v in options.items():
-            setattr(config.__dict__[section], k, v)
-
-
 def main():
     cmd = argparse.ArgumentParser(
         description=
@@ -70,15 +63,16 @@ def main():
         debugpy.listen(5678)
         debugpy.wait_for_client()
 
-    apply_config(args.config)
+    runtime_config.apply(args.config)
+
     try:
         process(args.feed,
                 args.out_dir,
                 use_simplify_linear=args.linear,
                 remove_existing_files=args.remove_existing_files)
-    except gtfs_loader.ParseError as exc:
-        # Skip backtrace for common issues with the input GTFS feed
-        print('ParseError', exc)
+    except (gtfs_loader.ParseError, classify_transfers.InvalidRuleError) as exc:
+        # Skip backtrace for common issues which indicate data or config issues
+        print(f'Error: {type(exc).__name__}: {exc}')
         sys.exit(1)
 
     if logs.Warn.any_warnings:

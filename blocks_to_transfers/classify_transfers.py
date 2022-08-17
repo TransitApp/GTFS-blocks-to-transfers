@@ -5,8 +5,22 @@ predict whether a transfer is most likely to be of type:
 4: In-seat transfer
 5: Vehicle continuation only (for operational reasons)
 """
+import collections
+from enum import Enum
+from dataclasses import dataclass
+from typing import Optional
 from gtfs_loader.schema import DAY_SEC, TransferType
 from . import config, shape_similarity
+
+class Operation(str, Enum):
+    # Change the transfer_type
+    MODIFY = "modify"
+
+    # Not implemented: add blocks to specific trips
+    CREATE_BLOCK = "create_block"
+
+    # Not implemented: entirely remove a trip-to-trip transfers
+    REMOVE = "remove"
 
 
 class ShapeMatchState:
@@ -20,15 +34,18 @@ class ShapeMatchState:
 def classify(gtfs, transfers):
     print('Predicting transfer_type for each identified continuation')
     shape_match = ShapeMatchState()
+    rule_stats = collections.Counter()
+
     for transfer in transfers:
-        transfer.transfer_type = get_transfer_type(gtfs, shape_match, transfer)
+        transfer.transfer_type = get_transfer_type(gtfs, shape_match, rule_stats, transfer)
 
     print(
         f'\tComparison by similarity metric required for {len(shape_match.shape_ptr_by_trip)} trips having {len(shape_match.shape_ptr_by_shape)} distinct stop_times shapes'
     )
+    print_rule_stats(rule_stats)
 
 
-def get_transfer_type(gtfs, shape_match, transfer):
+def get_transfer_type(gtfs, shape_match, rule_stats, transfer):
     trip = gtfs.trips[transfer.from_trip_id]
     cont_trip = gtfs.trips[transfer.to_trip_id]
 
@@ -40,12 +57,10 @@ def get_transfer_type(gtfs, shape_match, transfer):
     if wait_time > config.InSeatTransfers.max_wait_time:
         return TransferType.VEHICLE_CONTINUATION
 
-    # transfer involves a banned stop
-    if (trip.last_stop_time.stop.stop_name
-            in config.InSeatTransfers.banned_stops or
-            cont_trip.first_stop_time.stop.stop_name
-            in config.InSeatTransfers.banned_stops):
-        return TransferType.VEHICLE_CONTINUATION
+    specified_type = get_specific_cases_result(rule_stats, trip, cont_trip)
+    # a specific rule governs the type of this transfer
+    if specified_type is not None:
+        return specified_type
 
     # cont_trip resumes too far away from where trip ended (probably involves deadheading)
     if trip.last_point.distance_to(
@@ -98,3 +113,96 @@ def get_shape_ptr(shape_match, trip):
         trip.stop_shape, trip.stop_shape)
     shape_match.shape_ptr_by_trip[trip.trip_id] = shape_ptr
     return shape_ptr
+
+
+class InvalidRuleError(Exception):
+    pass
+
+def get_specific_cases_result(rule_stats, trip, cont_trip):
+    """
+    Last matching rule wins. 
+    Returns None if no specific rule applies. Heuristics will be used in that case.
+    """
+    last_idx, last_specified_type = None, None
+
+    for i, rule in enumerate(config.SpecialContinuations):
+        try:
+            specified_type = apply_specific_case(rule, trip, cont_trip)
+        except TypeError as exc:
+            raise InvalidRuleError(f'{rule}: {exc.args[0]}; ignored.') from exc
+
+        if specified_type is not None:
+            last_idx, last_specified_type = i, specified_type
+
+    if last_idx is not None:
+       rule_stats[last_idx] += 1
+
+    return last_specified_type
+
+
+def apply_specific_case(rule, trip, cont_trip):
+    if rule.op is not None and rule.op != Operation.MODIFY:
+        # Other operations not yet implemented
+        return None
+
+    if not rule.match:
+        raise TypeError('no selectors')
+
+    for selector in rule.match:
+        if selector_applies_to_trips(selector, trip, cont_trip):
+            return TransferType(rule.transfer_type)
+
+
+@dataclass
+class StandardSelector:
+    route: Optional[str] = None
+    stop: Optional[str] = None
+
+    def applies(self, trip, stop_to_check):
+        if self.route is None and self.stop is None:
+            raise TypeError('has no selector criteria')
+
+        if self.route is not None and self.route != trip.route.route_short_name:
+            return False
+
+        if self.stop is not None and self.stop != stop_to_check.stop_name:
+            return False
+
+        return True
+
+
+def selector_applies_to_trips(selector, trip, cont_trip):
+    if selector.all and len(selector) == 1:
+        # "all" selectors always apply
+        return True
+
+    if selector.through and len(selector) == 1:
+        # "through" selectors apply if they match either trip or cont_trip
+        std_selector = StandardSelector(**selector.through)
+        return (std_selector.applies(trip, trip.last_stop)
+                or std_selector.applies(cont_trip, cont_trip.first_stop))
+
+    if not selector['from'] and not selector.to:
+        raise TypeError('invalid selector')
+
+    if selector['from']:
+        std_selector = StandardSelector(selector['from'].route, selector['from'].last_stop)
+        if not std_selector.applies(trip, trip.last_stop):
+            return False
+
+    if selector.to:
+        std_selector = StandardSelector(selector.to.route, selector.to.first_stop)
+        if not std_selector.applies(cont_trip, cont_trip.first_stop):
+            return False
+
+    return True
+
+
+def print_rule_stats(rule_stats):
+    if not rule_stats:
+        return
+
+    print('\tSpecial continuation rules by number of matches')
+    for idx, freq in rule_stats.most_common():
+        print(f'\t\t{freq: 4d} {config.SpecialContinuations[idx]}')
+

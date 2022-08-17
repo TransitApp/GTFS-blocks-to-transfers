@@ -1,6 +1,6 @@
 # gtfs-blocks-to-transfers
 
-Converts GTFS blocks, defined by setting [trip.block\_id](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#example-blocks-and-service-day) into a series of [trip-to-trip transfers (proposal)](https://github.com/google/transit/pull/303). Uses configurable heuristics  to predict whether two trips are connected as _in-seat transfers_ or as _vehicle continuations_ only. This tool also validates predefined trip-to-trip transfers in `transfers.txt`.
+Converts GTFS blocks, defined by setting [trip.block\_id](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#example-blocks-and-service-day) into a series of [trip-to-trip transfers (GTFS specification)](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#linked-trips). Uses configurable heuristics  to predict whether two trips are connected as _in-seat transfers_ or as _vehicle continuations_ only. This tool also validates predefined trip-to-trip transfers in `transfers.txt`.
 
 Usage: `./convert.py <input feed> <directory for output>`
 
@@ -34,8 +34,65 @@ Riders probably won't be able to, or want to, to stay on board if:
 * The wait time aboard the bus is quite long.
 * The next trip is very similar to the preceding trip, but in reverse. We assess similarity by comparing the sequence of stop locations of the two trips using a modified [Hausdorff metric](https://en.wikipedia.org/wiki/Hausdorff_distance).
 
-You can adjust thresholds or entirely disable a heuristic in [`blocks_to_transfers/config.py`](#).
+You can adjust thresholds or entirely disable a heuristic in [`blocks_to_transfers/config.py`](#). Configuration can also be provided as a JSON string with the `--config` argument.
 
+## Special continuations
+
+Precise rules can also be added to enable or disable in-seat transfers for particular stops and routes within a feed. 
+
+A _rule_ is a JSON object consisting of three parts:
+
+- `match`: A list of _selectors_.
+- `op`: The action to take on matching predicted continuations.
+    - `modify`: Change the `transfer_type`.
+    - More operations are planned in the future.
+- `transfer_type`: Only for `modify` operations. The new `transfer_type` to assign,
+    - `4`: in-seat transfer
+    - `5`: vehicle continuation only
+
+The following _selectors_ are supported:
+
+- _All_ selectors will match any trip-to-trip transfers.
+    - Example: `{"all": true}`
+    - This selector may not be combined with any other selector.
+- _Through_ selectors will match either the `from_trip` or the `to_trip`.
+    - Example: `{"through": {"route": "1", "stop": "Terminus Longueuil"}}`
+    - You can specify a `route` (route short name), a `stop` (stop name), or both.
+    - This selector may not be combined with any other selector.
+- _From_ selectors will match on the `from_trip`.
+    - Example: `{"from": {"route": "20", "last_stop": "Osachoff / White"}}`
+    - You can specify a `route`, a `last_stop`, or both.
+- _To_ selectors will match on the `to_trip`.
+    - Example:  `{"to": {"route": "5T", "first_stop": "Stewart Creek"}}`
+    - You can specify a `route`, a `first_stop`, or both.
+- _From_ and _to_ selectors can be combined to match a particular continuation between two trips].
+    - Example: `{"from": {"route": "124", "last_stop": "3rd / Pine"}, "to": {"route": "26", "first_stop": "3rd / Pine"}}`
+
+When a transfer matches multiple rules, the last rule wins. For transfers predicted from blocks, special continuation rules override all heuristics except `max_wait_time`. Rules never apply to predefined transfers specified using `transfers.txt`.
+
+For example, to enable in-seat transfers only for routes 20 and 99 the following configuration can be set:
+
+```json
+{
+    "SpecialContinuations": [
+        {
+            "match": [
+                {"all": true}
+            ],
+            "op": "modify",
+            "transfer_type": 5
+        },
+        {
+            "match": [
+                {"through": {"route": "20"}},
+                {"through": {"route": "99"}}
+            ],
+            "op": "modify"
+            "transfer_type": 4
+        }
+    ]
+} 
+```
 
 ## Advanced
 
