@@ -4,7 +4,7 @@ import shutil
 import json
 import sys
 import gtfs_loader
-from . import convert_blocks, config, service_days, classify_transfers, simplify_fix, simplify_linear, simplify_export, logs
+from . import convert_blocks, config, service_days, classify_transfers, simplify_fix, simplify_linear, simplify_export, logs, runtime_config
 
 
 def process(in_dir,
@@ -36,13 +36,6 @@ def process(in_dir,
     print('Done.')
 
 
-def apply_config(config_override_str):
-    config_override = json.loads(config_override_str)
-    for section, options in config_override.items():
-        for k, v in options.items():
-            setattr(config.__dict__[section], k, v)
-
-
 def main():
     cmd = argparse.ArgumentParser(
         description=
@@ -70,7 +63,8 @@ def main():
         debugpy.listen(5678)
         debugpy.wait_for_client()
 
-    apply_config(args.config)
+    runtime_config.apply(args.config)
+
     try:
         process(args.feed,
                 args.out_dir,
