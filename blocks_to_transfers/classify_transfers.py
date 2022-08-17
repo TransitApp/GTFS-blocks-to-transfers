@@ -146,7 +146,7 @@ def apply_specific_case(rule, trip, cont_trip):
         return None
 
     if not rule.match:
-        raise TypeErorr('no selectors')
+        raise TypeError('no selectors')
 
     for selector in rule.match:
         if selector_applies_to_trips(selector, trip, cont_trip):
