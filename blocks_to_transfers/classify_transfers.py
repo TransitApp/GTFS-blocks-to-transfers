@@ -12,7 +12,6 @@ from typing import Optional
 from gtfs_loader.schema import DAY_SEC, TransferType
 from . import config, shape_similarity
 
-
 class Operation(str, Enum):
     # Change the transfer_type
     MODIFY = "modify"
@@ -116,6 +115,9 @@ def get_shape_ptr(shape_match, trip):
     return shape_ptr
 
 
+class InvalidRuleError(Exception):
+    pass
+
 def get_specific_cases_result(rule_stats, trip, cont_trip):
     """
     Last matching rule wins. 
@@ -124,7 +126,10 @@ def get_specific_cases_result(rule_stats, trip, cont_trip):
     last_idx, last_specified_type = None, None
 
     for i, rule in enumerate(config.SpecialContinuations):
-        specified_type = apply_specific_case(rule, trip, cont_trip)
+        try:
+            specified_type = apply_specific_case(rule, trip, cont_trip)
+        except TypeError as exc:
+            raise InvalidRuleError(f'{rule}: {exc.args[0]}; ignored.') from exc
 
         if specified_type is not None:
             last_idx, last_specified_type = i, specified_type
@@ -140,6 +145,9 @@ def apply_specific_case(rule, trip, cont_trip):
         # Other operations not yet implemented
         return None
 
+    if not rule.match:
+        raise TypeErorr('no selectors')
+
     for selector in rule.match:
         if selector_applies_to_trips(selector, trip, cont_trip):
             return TransferType(rule.transfer_type)
@@ -152,8 +160,7 @@ class StandardSelector:
 
     def applies(self, trip, stop_to_check):
         if self.route is None and self.stop is None:
-            # Has no criteria; probably a bug
-            return False
+            raise TypeError('has no selector criteria')
 
         if self.route is not None and self.route != trip.route.route_short_name:
             return False
@@ -165,19 +172,18 @@ class StandardSelector:
 
 
 def selector_applies_to_trips(selector, trip, cont_trip):
-    if selector.all:
+    if selector.all and len(selector) == 1:
         # "all" selectors always apply
         return True
 
-    if selector.through:
+    if selector.through and len(selector) == 1:
         # "through" selectors apply if they match either trip or cont_trip
         std_selector = StandardSelector(**selector.through)
         return (std_selector.applies(trip, trip.last_stop)
                 or std_selector.applies(cont_trip, cont_trip.first_stop))
 
     if not selector['from'] and not selector.to:
-        # Doesn't have any valid selectors
-        return False
+        raise TypeError('invalid selector')
 
     if selector['from']:
         std_selector = StandardSelector(selector['from'].route, selector['from'].last_stop)

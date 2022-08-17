@@ -6,8 +6,7 @@ def apply(config_override_str):
     """
     Applies JSON configuration options passed at runtime
     """
-    config_override = json.loads(config_override_str, 
-            object_hook=GetDict)
+    config_override = json.loads(config_override_str)
 
     for section, options in config_override.items():
         if section == 'SpecialContinuations':

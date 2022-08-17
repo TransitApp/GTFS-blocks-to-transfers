@@ -54,18 +54,21 @@ The following _selectors_ are supported:
 
 - _All_ selectors will match any trip-to-trip transfers.
     - Example: `{"all": true}`
+    - This selector may not be combined with any other selector.
 - _Through_ selectors will match either the `from_trip` or the `to_trip`.
     - Example: `{"through": {"route": "1", "stop": "Terminus Longueuil"}}`
     - You can specify a `route` (route short name), a `stop` (stop name), or both.
+    - This selector may not be combined with any other selector.
 - _From_ selectors will match on the `from_trip`.
     - Example: `{"from": {"route": "20", "last_stop": "Osachoff / White"}}`
     - You can specify a `route`, a `last_stop`, or both.
 - _To_ selectors will match on the `to_trip`.
     - Example:  `{"to": {"route": "5T", "first_stop": "Stewart Creek"}}`
+    - You can specify a `route`, a `first_stop`, or both.
 - _From_ and _to_ selectors can be combined to match a particular continuation between two trips].
     - Example: `{"from": {"route": "124", "last_stop": "3rd / Pine"}, "to": {"route": "26", "first_stop": "3rd / Pine"}}`
 
-When a transfer matches multiple rules, the last rule wins. For transfers predicted from blocks, special continuation rules override all heuristics except `max_wait_time`. Rules never apply to predefined transfers specified using `transfers.txt`
+When a transfer matches multiple rules, the last rule wins. For transfers predicted from blocks, special continuation rules override all heuristics except `max_wait_time`. Rules never apply to predefined transfers specified using `transfers.txt`.
 
 For example, to enable in-seat transfers only for routes 20 and 99 the following configuration can be set:
 
