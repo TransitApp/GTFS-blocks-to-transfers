@@ -49,6 +49,7 @@ A _rule_ is a JSON object consisting of three parts:
 - `transfer_type`: Only for `modify` operations. The new `transfer_type` to assign,
     - `4`: in-seat transfer
     - `5`: vehicle continuation only
+    - (Transit's internal use) `104`: in-seat transfer for trip planner only 
 
 The following _selectors_ are supported:
 
