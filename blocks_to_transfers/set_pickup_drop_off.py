@@ -1,8 +1,6 @@
 from gtfs_loader.schema import TransferType, PickupType
 
 def set_pickup_drop_off(gtfs):
-    from_trip_ids_to_set = set()
-    to_trip_ids_to_set = set()
     for from_trip_id, transfers in gtfs.transfers.items():
         for transfer in transfers:
             transfer_type = transfer.transfer_type
@@ -10,6 +8,7 @@ def set_pickup_drop_off(gtfs):
 
             if not (from_trip_id and to_trip_id):
                 continue
+
             if transfer_type in TransferType and transfer_type != TransferType.IN_SEAT:
                 continue
             
