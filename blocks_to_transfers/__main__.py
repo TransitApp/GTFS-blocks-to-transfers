@@ -4,7 +4,7 @@ import shutil
 import json
 import sys
 import gtfs_loader
-from . import convert_blocks, config, service_days, classify_transfers, simplify_fix, simplify_linear, simplify_export, logs, runtime_config
+from . import convert_blocks, config, service_days, classify_transfers, simplify_fix, simplify_linear, simplify_export, logs, runtime_config, set_pickup_drop_off
 
 
 def process(in_dir,
@@ -26,6 +26,8 @@ def process(in_dir,
     else:
         output_graph = graph
     simplify_export.export_visit(output_graph)
+
+    set_pickup_drop_off.set_pickup_drop_off(gtfs)
 
     if remove_existing_files:
         shutil.rmtree(out_dir, ignore_errors=True)
