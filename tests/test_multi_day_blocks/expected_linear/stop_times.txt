@@ -1,0 +1,13 @@
+trip_id,stop_sequence,stop_id,arrival_time,departure_time
+trip_1,0,junction,06:00:00,06:00:00,
+trip_1,1,slocan-park,24:15:15,24:15:15
+trip_2,0,slocan-park,24:17:15,24:17:15
+trip_2,1,junction,29:55:00,29:55:00
+trip_2a,0,slocan-park,00:17:15,00:17:15
+trip_2a,1,junction,04:00:00,04:00:00
+trip_3,0,junction,04:01:00,04:01:00
+trip_3,1,slocan-park,24:15:15,24:15:15
+trip_4,1,slocan-park,24:17:15,24:17:15
+trip_4,2,junction,24:19:15,24:19:15
+trip_5,1,junction,05:00:00,05:00:00
+trip_5,2,slocan-park,06:00:00,06:00:00

@@ -167,6 +167,22 @@ def add_path_to_graph(t_graph, last_transition, days):
 
         parent_days = t_graph.services.days_in_from_frame(
             parent_transition.trip, last_transition.trip, days)
+        if (parent_transition.trip.trip_id == '38912020' and last_transition.trip.trip_id == '73180020'):
+            print(parent_transition.trip.trip_id, last_transition.trip.trip_id)
+            print(t_graph.services.bdates(days))
+            print(t_graph.services.bdates(parent_days))
+        if (parent_transition.trip.trip_id == '38912020' and last_transition.trip.trip_id == '19526070'):
+            print(parent_transition.trip.trip_id, last_transition.trip.trip_id)
+            print(t_graph.services.bdates(days))
+            print(t_graph.services.bdates(parent_days))
+        if (parent_transition.trip.trip_id == '35863070' and last_transition.trip.trip_id == '19526070'):
+            print(parent_transition.trip.trip_id, last_transition.trip.trip_id)
+            print(t_graph.services.bdates(days))
+            print(t_graph.services.bdates(parent_days))
+        if (parent_transition.trip.trip_id == 'trip_0'):
+            print(parent_transition.trip.trip_id, last_transition.trip.trip_id)
+            print(t_graph.services.pdates(days))
+            print(t_graph.services.pdates(parent_days))
         transfer = parent_transition.out_edges[current_transition.node]
         parent_split_node = get_path_node(t_graph, composite_nodes,
                                           parent_transition, parent_days)
