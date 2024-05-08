@@ -139,17 +139,7 @@ class ServiceDays:
         """
 
         # Restore original representation of trip's days if it started after midnight
-        if (trip.trip_id == '38912020'):
-            print(self.pdates(days))
-        if (trip.trip_id == 'trip_0'):
-            print(self.pdates(days))
-
         days = days.shift(-trip.shift_days)
-
-        if (trip.trip_id == '38912020' or trip.trip_id == 'trip_0'):
-            print(self.pdates(days))
-            print(trip.shift_days)
-
         service_id = self.service_by_days.get(days)
         if service_id:
             return service_id
@@ -158,21 +148,13 @@ class ServiceDays:
         self.synth_service_counter += 1
         self.service_by_days[days] = service_id
 
-        print('')
-        print('pdates')
-        print(self.pdates(days))
-        print('GTFSdates')
-        for date in self.to_dates(days):
-            print(GTFSDate(date))
-        print('')
-
         self.gtfs.calendar_dates[service_id] = [
             CalendarDate(service_id=service_id,
                          date=GTFSDate(date),
                          exception_type=ExceptionType.ADD)
             for date in self.to_dates(days)
         ]
-
+        
         return service_id
 
     def to_dates(self, day_set):

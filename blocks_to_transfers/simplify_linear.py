@@ -150,7 +150,9 @@ def find_paths(graph):
 
 
 def add_path_to_graph(t_graph, last_transition, days):
+    print('path through graph')
     composite_nodes = {}
+    parent_days = days
     current_transition = last_transition
     split_node = get_path_node(t_graph, composite_nodes, current_transition,
                                days)
@@ -161,12 +163,14 @@ def add_path_to_graph(t_graph, last_transition, days):
         if not parent_transition or not parent_transition.has_trip():
             # Reached the end of the path
             # Even though export will work anyway, injecting a source node can improve the readability of transfers.txt
-            split_node.source_node.days = days
+            split_node.source_node.days = parent_days
             t_graph.sources.add(split_node.source_node)
             break
 
         parent_days = t_graph.services.days_in_from_frame(
-            parent_transition.trip, last_transition.trip, days)
+            parent_transition.trip, current_transition.trip, parent_days)
+        
+    
         if (parent_transition.trip.trip_id == '38912020' and last_transition.trip.trip_id == '73180020'):
             print(parent_transition.trip.trip_id, last_transition.trip.trip_id)
             print(t_graph.services.bdates(days))
@@ -180,9 +184,9 @@ def add_path_to_graph(t_graph, last_transition, days):
             print(t_graph.services.bdates(days))
             print(t_graph.services.bdates(parent_days))
         if (parent_transition.trip.trip_id == 'trip_0'):
-            print(parent_transition.trip.trip_id, last_transition.trip.trip_id)
-            print(t_graph.services.pdates(days))
-            print(t_graph.services.pdates(parent_days))
+            print('Parent Transition', parent_transition.trip.trip_id, last_transition.trip.trip_id)
+            print('Parent Transition Days', t_graph.services.bdates(days))
+            print('Parent Transition Parent Days', t_graph.services.bdates(parent_days))
         transfer = parent_transition.out_edges[current_transition.node]
         parent_split_node = get_path_node(t_graph, composite_nodes,
                                           parent_transition, parent_days)
