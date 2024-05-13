@@ -140,7 +140,6 @@ class ServiceDays:
 
         # Restore original representation of trip's days if it started after midnight
         days = days.shift(-trip.shift_days)
-
         service_id = self.service_by_days.get(days)
         if service_id:
             return service_id
@@ -155,7 +154,7 @@ class ServiceDays:
                          exception_type=ExceptionType.ADD)
             for date in self.to_dates(days)
         ]
-
+        
         return service_id
 
     def to_dates(self, day_set):

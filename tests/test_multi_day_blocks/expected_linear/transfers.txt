@@ -1,0 +1,10 @@
+from_trip_id,to_trip_id,transfer_type
+trip_0_b2t:if_b2t:service_0,trip_0b_b2t:if_b2t:service_0,5
+trip_0_b2t:if_friday,trip_0b_b2t:if_friday,5
+trip_0b_b2t:if_b2t:service_0,trip_1_b2t:if_b2t:service_0,5
+trip_0b_b2t:if_friday,trip_1_b2t:if_friday,5
+trip_1_b2t:if_b2t:service_0,trip_2_b2t:if_b2t:service_0,5
+trip_1_b2t:if_friday,trip_2_b2t:if_friday,5
+trip_2_b2t:if_friday,trip_2a,5
+trip_2a,trip_3,5
+trip_3,trip_4,5

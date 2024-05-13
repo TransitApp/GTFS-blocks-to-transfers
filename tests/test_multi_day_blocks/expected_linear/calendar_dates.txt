@@ -1,0 +1,11 @@
+service_id,date,exception_type
+b2t:service_0,20240506,1
+b2t:service_0,20240507,1
+b2t:service_0,20240508,1
+b2t:service_0,20240509,1
+b2t:service_0,20240513,1
+b2t:service_0,20240514,1
+b2t:service_0,20240515,1
+b2t:service_0,20240516,1
+b2t:service_0,20240520,1
+b2t:service_0,20240521,1

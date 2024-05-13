@@ -1,0 +1,9 @@
+route_id,trip_id,service_id,block_id
+red,trip_0,weekday,1
+red,trip_0b,weekday,1
+red,trip_1,weekday,1
+red,trip_2,weekday,1
+red,trip_2a,saturday,1
+red,trip_3,saturday,1
+red,trip_4,saturday,1
+red,trip_5,sunday,1

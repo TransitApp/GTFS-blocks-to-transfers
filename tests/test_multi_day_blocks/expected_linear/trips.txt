@@ -1,0 +1,13 @@
+route_id,trip_id,service_id,block_id
+red,trip_0_b2t:if_b2t:service_0,b2t:service_0,1
+red,trip_0_b2t:if_friday,friday,1
+red,trip_0b_b2t:if_b2t:service_0,b2t:service_0,1
+red,trip_0b_b2t:if_friday,friday,1
+red,trip_1_b2t:if_b2t:service_0,b2t:service_0,1
+red,trip_1_b2t:if_friday,friday,1
+red,trip_2_b2t:if_b2t:service_0,b2t:service_0,1
+red,trip_2_b2t:if_friday,friday,1
+red,trip_2a,saturday,1
+red,trip_3,saturday,1
+red,trip_4,saturday,1
+red,trip_5,sunday,1
