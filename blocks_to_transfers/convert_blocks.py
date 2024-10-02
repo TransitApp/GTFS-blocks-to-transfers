@@ -41,7 +41,7 @@ def group_trips(gtfs):
 
     for trip in sorted(gtfs.trips.values(),
                        key=lambda trip: trip.first_departure):
-        if not trip.block_id:
+        if (not trip.block_id) or (trip.stop_shape is None):
             continue
 
         if len(gtfs.stop_times.get(trip.trip_id, [])) < 2:
