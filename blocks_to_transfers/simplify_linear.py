@@ -1,5 +1,6 @@
 import collections
 import enum
+import logging
 from . import simplify_graph
 from .service_days import ServiceDays
 from .logs import Warn
@@ -28,15 +29,19 @@ def break_cycles(graph):
 
     stack = collections.deque(graph.sources)
     state = {}
+    parents = collections.defaultdict(list)
 
     while stack:
         from_node = stack[-1]
 
-        assert state.get(from_node) != Visited.EXIT
-
-        if state.get(from_node) == Visited.ENTER:
+        node_state = state.get(from_node)
+        if node_state == Visited.ENTER:
             # All children of this node are now visited
             state[from_node] = Visited.EXIT
+            stack.pop()
+            continue
+        elif node_state == Visited.EXIT:
+            logging.warning(f'Node {from_node} has multiple parents: {parents[from_node]}')
             stack.pop()
             continue
 
@@ -44,18 +49,19 @@ def break_cycles(graph):
         state[from_node] = Visited.ENTER
 
         for to_node in list(from_node.out_edges.keys()):
+            node_state = state.get(to_node)
+            if node_state is None:
+                # Unvisited node
+                parents[to_node].append(from_node)
+                stack.append(to_node)
+                continue
+            elif node_state == Visited.EXIT:
+                # Alternative path to a visited node
+                continue
+
             shift_days = ServiceDays.get_shift(from_node.trip, to_node.trip)
             match_days = from_node.days.intersection(
                 to_node.days.shift(shift_days))
-
-            if to_node not in state:
-                # Unvisited node
-                stack.append(to_node)
-                continue
-
-            if state[to_node] == Visited.EXIT:
-                # Alternative path to a visited node
-                continue
 
             # Cycle: edge is removed, days along edge reassigned to sink node
             # of from_node and source node of to_node
