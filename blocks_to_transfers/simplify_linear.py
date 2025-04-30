@@ -59,13 +59,14 @@ def break_cycles(graph):
                 # Alternative path to a visited node
                 continue
 
+            shift_days = ServiceDays.get_shift(from_node.trip, to_node.trip)
+            match_days = from_node.days.intersection(
+                to_node.days.shift(shift_days))
+
             # Cycle: edge is removed, days along edge reassigned to sink node
             # of from_node and source node of to_node
             graph.del_edge(from_node, to_node)
 
-            shift_days = ServiceDays.get_shift(from_node.trip, to_node.trip)
-            match_days = from_node.days.intersection(
-                to_node.days.shift(shift_days))
             match_days_reshifted = match_days.shift(-shift_days)
             from_node.sink_node.days = from_node.sink_node.days.union(
                 match_days_reshifted)
