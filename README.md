@@ -10,6 +10,10 @@ The easiest way to install the tool is to clone this repository, then run `pip i
 
 If that doesn't work, try to run `python3 manual_install.py`. 
 
+## Uploading package to PyPI
+
+Run `tools/upload.sh`
+
 ## How it works
 
 Throughout this tool, sets of _service days_ are used to relate trips. They are defined in [`service_days.py`](#), and are represented as a bitmap per `service_id`, with bit `n` set to 1 if that service operates on the `n`th day since the beginning of the feed. The term _trip's service days_ refers to the service days for `trip.service_id`. If the first departure of a trip is after `24:00:00`, the service days are stored _as-if_ the trip began the next day between `00:00:00` and `23:59:59`.
