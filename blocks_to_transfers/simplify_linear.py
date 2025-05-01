@@ -42,7 +42,7 @@ def break_cycles(graph):
             continue
         elif node_state == Visited.EXIT:
             logging.warning(f'Node {from_node.trip["rt_trip_id"]}, block id {from_node.trip["block_id"]} ' +
-                'has multiple back continuations: {[node.trip["rt_trip_id"] for node in parents[from_node]]}')
+                f'has multiple back continuations: {[node.trip["rt_trip_id"] for node in parents[from_node]]}')
             stack.pop()
             continue
 
