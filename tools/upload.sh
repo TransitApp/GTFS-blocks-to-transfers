@@ -1,4 +1,8 @@
-# If you get any errors, run `pip install setuptools wheel twine`
+# If you get any errors, run:
+# ```
+# brew install --cask 1password-cli
+# pip install setuptools wheel twine
+# ```
 rm -rf dist
 python3 setup.py sdist bdist_wheel
 TWINE_USERNAME=transit \
