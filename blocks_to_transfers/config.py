@@ -29,6 +29,11 @@ class InSeatTransfers:
     # If true, ignore all trips serving the same route in the opposite direction
     ignore_return_via_same_route = False
 
+    # If true, all trips serving the same route in the opposite direction will receive type
+    # continuation type 104, a custom transfer_type ingested by Transit app to hide the continuation in map
+    # view (to avoid visual clutter), but to still treat the continuation as in-seat for routing purposes
+    same_route_104 = False
+
     # If true, ignore all trips which appear to return along a similar path (determined by sequence of stop locations),
     # regardless of whether or not they are served by the same route
     ignore_return_via_similar_trip = True

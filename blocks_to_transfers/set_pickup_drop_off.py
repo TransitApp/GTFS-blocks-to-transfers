@@ -9,8 +9,6 @@ def set_pickup_drop_off(gtfs):
             if not (from_trip_id and to_trip_id):
                 continue
 
-            if transfer_type in TransferType and transfer_type != TransferType.IN_SEAT:
-                continue
-            
-            gtfs.stop_times[from_trip_id][-1].pickup_type = PickupType.REGULARLY_SCHEDULED
-            gtfs.stop_times[to_trip_id][0].drop_off_type = PickupType.REGULARLY_SCHEDULED
+            if transfer_type == TransferType.IN_SEAT or transfer_type == TransferType.IN_SEAT_TRIP_PLANNING_ONLY:
+                gtfs.stop_times[from_trip_id][-1].pickup_type = PickupType.REGULARLY_SCHEDULED
+                gtfs.stop_times[to_trip_id][0].drop_off_type = PickupType.REGULARLY_SCHEDULED

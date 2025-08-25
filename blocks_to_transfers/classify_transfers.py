@@ -67,6 +67,10 @@ def get_transfer_type(gtfs, shape_match, rule_stats, transfer):
             cont_trip.first_point
     ) > config.InSeatTransfers.same_location_distance:
         return TransferType.VEHICLE_CONTINUATION
+    
+    if config.InSeatTransfers.same_route_104:
+        if trip.route_id == cont_trip.route_id:
+            return TransferType.IN_SEAT_TRIP_PLANNING_ONLY
 
     # trip and cont_trip form a full loop, so riders may want to stay
     # onboard despite similarity in shape.
