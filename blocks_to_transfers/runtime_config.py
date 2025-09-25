@@ -2,12 +2,10 @@ import json
 from . import config
 
 
-def apply(config_override_str):
+def apply(config_override):
     """
-    Applies JSON configuration options passed at runtime
+    Applies configuration options passed at runtime
     """
-    config_override = json.loads(config_override_str)
-
     for section, options in config_override.items():
         if section == 'SpecialContinuations':
             # This section is a list
