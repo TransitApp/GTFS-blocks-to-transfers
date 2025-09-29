@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import dependency_info
 
 setup(name='GTFS-blocks-to-transfers',
-      version='1.7.5',
+      version='1.7.6',
       description='Convert GTFS blocks to trip-to-trip transfers',
       url='https://github.com/TransitApp/GTFS-blocks-to-transfers',
       author='Nicholas Paun',

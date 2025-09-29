@@ -1,6 +1,6 @@
 import pytest
 from gtfs_loader import test_support
-import blocks_to_transfers.__main__
+import blocks_to_transfers.processing
 
 
 test_support.init(__file__)
@@ -23,7 +23,7 @@ def test_linear(feed_dir):
 def do_test(feed_dir, simplification):
     work_dir = test_support.create_test_data(feed_dir)
 
-    blocks_to_transfers.__main__.process(
+    blocks_to_transfers.processing.process(
         work_dir, work_dir, 
         use_simplify_linear=(simplification == 'linear'),
         sorted_io=True)
