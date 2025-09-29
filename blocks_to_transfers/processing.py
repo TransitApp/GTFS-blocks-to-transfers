@@ -30,5 +30,5 @@ def process(in_dir,
 
     gtfs_loader.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir, 
             sorted_output=sorted_io)
-    
+
     print('Done.')

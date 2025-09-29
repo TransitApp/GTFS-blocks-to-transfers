@@ -10,6 +10,12 @@ def process_with_config(in_dir,
             sorted_io=False,
             ):
     runtime_config.apply(config_override)
-    processing.process(in_dir, out_dir, use_simplify_linear, remove_existing_files, sorted_io)
+    processing.process(
+        in_dir=in_dir,
+        out_dir=out_dir,
+        use_simplify_linear=use_simplify_linear,
+        remove_existing_files=remove_existing_files,
+        sorted_io=sorted_io
+    )
 
 __all__ = ["process_with_config"]
