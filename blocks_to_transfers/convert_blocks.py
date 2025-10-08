@@ -20,9 +20,9 @@ class TripConvertState:
         self.num_matches = 0
 
 
-def convert(gtfs, services):
+def convert(gtfs, services, itineraries=False):
     print('Predicting continuation trip for trips within blocks')
-    trips_by_block = group_trips(gtfs)
+    trips_by_block = group_trips(gtfs, itineraries=itineraries)
     converted_transfers = []
     data = BlockConvertState(gtfs, services, {})
 
@@ -35,7 +35,7 @@ def convert(gtfs, services):
     return converted_transfers
 
 
-def group_trips(gtfs):
+def group_trips(gtfs, itineraries=False):
     unique_shapes = {}
     trips_by_block = {}
 
@@ -44,7 +44,7 @@ def group_trips(gtfs):
         if (not trip.block_id) or (trip.stop_shape is None):
             continue
 
-        if len(gtfs.stop_times.get(trip.trip_id, [])) < 2:
+        if is_trivial_trip(trip, gtfs, itineraries=itineraries):
             Warn(f'Trip {trip.trip_id} deleted as it has fewer than two stops.'
                 ).print()
             continue
@@ -148,11 +148,11 @@ def reasonable_deadheading_speed(trip, cont_trip, wait_time, debug_context):
     if speed > config.TripToTripTransfers.max_deadheading_speed:
         Warn(f'''
         Block {trip.block_id} is invalid - attempting auto-fix:
-            | {trip.first_departure} {trip.first_stop_time.stop.stop_name} [trip {trip.trip_id}]
-            v {trip.last_arrival} {trip.last_stop_time.stop.stop_name} [trip {trip.trip_id}]
+            | {trip.first_departure} {trip.first_stop.stop_name} [trip {trip.trip_id}]
+            v {trip.last_arrival} {trip.last_stop.stop_name} [trip {trip.trip_id}]
             \t(!) Would require travelling {dist/1000:.2f} km at {speed:.0f} km/h (!)
-            | {cont_trip.first_departure} {cont_trip.first_stop_time.stop.stop_name} [trip {cont_trip.trip_id}] 
-            v {cont_trip.last_arrival} {cont_trip.last_stop_time.stop.stop_name} [trip {cont_trip.trip_id}]
+            | {cont_trip.first_departure} {cont_trip.first_stop.stop_name} [trip {cont_trip.trip_id}] 
+            v {cont_trip.last_arrival} {cont_trip.last_stop.stop_name} [trip {cont_trip.trip_id}]
             
             Occurs on days {debug_context}.
         ''').print()
@@ -184,3 +184,9 @@ def valid_wait_time(trip, cont_trip, wait_time, debug_context):
         return False
     else:
         raise block_error
+
+def is_trivial_trip(trip, gtfs, itineraries=False):
+    if itineraries:
+        return len(gtfs.itinerary_cells.get(trip.itinerary_index, [])) < 2
+    else:
+        return len(gtfs.stop_times.get(trip.trip_id, [])) < 2

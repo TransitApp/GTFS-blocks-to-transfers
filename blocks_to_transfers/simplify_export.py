@@ -2,7 +2,7 @@ import collections
 import gtfs_loader
 
 
-def export_visit(graph):
+def export_visit(graph, itineraries=False):
     """
     Export each node (trip) and edge (transfer) in the graph. 
 
@@ -30,12 +30,12 @@ def export_visit(graph):
 
         visited.add(from_node)
         if from_node.has_trip():
-            from_trip_id = make_trip(graph, trip_id_splits, from_node)
+            from_trip_id = make_trip(graph, trip_id_splits, from_node, itineraries=itineraries)
             transfers_out = transfers.setdefault(from_trip_id, [])
 
         for to_node, transfer in from_node.out_edges.items():
             if to_node.has_trip():
-                to_trip_id = make_trip(graph, trip_id_splits, to_node)
+                to_trip_id = make_trip(graph, trip_id_splits, to_node, itineraries=itineraries)
 
             if from_node.has_trip() and to_node.has_trip():
                 split_transfer = transfer.clone(from_trip_id=from_trip_id,
@@ -44,7 +44,7 @@ def export_visit(graph):
 
             stack.append(to_node)
 
-    delete_fully_split_trips(graph.gtfs, trip_id_splits)
+    delete_fully_split_trips(graph.gtfs, trip_id_splits, itineraries=itineraries)
     split_noncontinuation_transfers(graph.gtfs, trip_id_splits, transfers)
     graph.gtfs.transfers = transfers
 
@@ -74,7 +74,7 @@ def split_noncontinuation_transfers(gtfs, trip_id_splits, transfers):
                     transfers_out.append(split_transfer)
 
 
-def make_trip(graph, trip_id_splits, node):
+def make_trip(graph, trip_id_splits, node, itineraries=False):
     splits = trip_id_splits.setdefault(node.trip_id, set())
 
     trip_original_days = graph.services.days_by_trip(node.trip)
@@ -88,14 +88,16 @@ def make_trip(graph, trip_id_splits, node):
     split_trip_id = f'{node.trip_id}_b2t:if_{service_id}'
     if split_trip_id not in graph.gtfs.trips:
         gtfs_loader.clone(graph.gtfs.trips, node.trip_id, split_trip_id)
-        gtfs_loader.clone(graph.gtfs.stop_times, node.trip_id, split_trip_id)
+        # The trip will follow the same itinerary, no need to clone the itinerary
+        if not itineraries:
+            gtfs_loader.clone(graph.gtfs.stop_times, node.trip_id, split_trip_id)
         graph.gtfs.trips[split_trip_id].service_id = service_id
 
     splits.add(split_trip_id)
     return split_trip_id
 
 
-def delete_fully_split_trips(gtfs, trip_id_splits):
+def delete_fully_split_trips(gtfs, trip_id_splits, itineraries=False):
     """
     If a particular trip has been split into variants, remove the now-redundant
     original trip.
@@ -108,4 +110,5 @@ def delete_fully_split_trips(gtfs, trip_id_splits):
             continue
 
         del gtfs.trips[trip_id]
-        del gtfs.stop_times[trip_id]
+        if not itineraries:
+            del gtfs.stop_times[trip_id]
