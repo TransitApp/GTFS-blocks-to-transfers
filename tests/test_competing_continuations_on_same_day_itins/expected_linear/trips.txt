@@ -1,0 +1,6 @@
+trip_id,raw_trip_id,raw_trip_headsign,raw_trip_short_name,rt_route_id,rt_trip_id,direction_id,rt_trip_headsign,trip_direction_id,rt_trip_direction_id,block_id,rt_block_id,trip_itinerary_id,rt_route_data,trip_short_name,trip_exclude_in_route_view,wheelchair_accessible,trip_multimodal_routing_enabled,bikes_allowed,route_id,service_id,shape_id,trip_headsign,trip_direction_headsign,trip_merged_headsign,trip_branch_code,rt_trip_branch_code,extra_value_by_key,direction_arrow,itinerary_index,arrival_times,departure_times,start_pickup_drop_off_windows,end_pickup_drop_off_windows
+loop,,,,,,,,,,block_1,,,,,,,,,3,fri-sat,,,,,,,,,first_dropoff_allowed_1//3_last_pickup_allowed,"[42060,42480,42660,42960]","[42060,42480,42660,42960]","[-1,-1,-1,-1]","[-1,-1,-1,-1]"
+trip_1_b2t:if_fri-sat,,,,,,,,,,block_1,,,,,,,,,99,fri-sat,,,,,,,,,1//99_last_pickup_allowed,"[39600,42000]","[39600,42000]","[-1,-1]","[-1,-1]"
+trip_1_b2t:if_mon-tues-wed-thurs,,,,,,,,,,block_1,,,,,,,,,99,mon-tues-wed-thurs,,,,,,,,,1//99,"[39600,42000]","[39600,42000]","[-1,-1]","[-1,-1]"
+trip_3_b2t:if_fri-sat,,,,,,,,,,block_1,,,,,,,,,99,fri-sat,,,,,,,,,first_dropoff_allowed_2//99,"[43140,45540]","[43140,45540]","[-1,-1]","[-1,-1]"
+trip_3_b2t:if_mon-tues-wed-thurs,,,,,,,,,,block_1,,,,,,,,,99,mon-tues-wed-thurs,,,,,,,,,2//99,"[43140,45540]","[43140,45540]","[-1,-1]","[-1,-1]"

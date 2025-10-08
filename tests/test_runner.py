@@ -26,6 +26,7 @@ def do_test(feed_dir, simplification):
     blocks_to_transfers.processing.process(
         work_dir, work_dir, 
         use_simplify_linear=(simplification == 'linear'),
-        sorted_io=True)
+        sorted_io=True,
+        itineraries=('itins' in feed_dir.name))
 
     test_support.check_expected_output(feed_dir, work_dir, tag=simplification)
