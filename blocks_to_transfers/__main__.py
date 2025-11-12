@@ -19,7 +19,11 @@ def main():
     cmd.add_argument(
         '--remove-existing-files',
         action='store_true',
-        help='Remove all files in the output directory before expoting')
+        help='Remove all files in the output directory before exporting')
+    cmd.add_argument(
+        '--itineraries',
+        action='store_true',
+        help='Load and export Transit itinerary_cells.txt format instead of stop_times.txt.')
     cmd.add_argument(
         '-c',
         '--config',
@@ -39,7 +43,8 @@ def main():
         processing.process(args.feed,
                 args.out_dir,
                 use_simplify_linear=args.linear,
-                remove_existing_files=args.remove_existing_files)
+                remove_existing_files=args.remove_existing_files,
+                itineraries=args.itineraries)
     except (gtfs_loader.ParseError, classify_transfers.InvalidRuleError) as exc:
         # Skip backtrace for common issues which indicate data or config issues
         print(f'Error: {type(exc).__name__}: {exc}')
