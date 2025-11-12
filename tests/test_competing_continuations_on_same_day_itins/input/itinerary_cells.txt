@@ -1,0 +1,9 @@
+itinerary_index,stop_sequence,raw_stop_headsign,stop_id,pickup_type,drop_off_type,timepoint,stop_direction_id,rt_stop_headsign,stop_branch_code,stop_headsign,stop_direction_headsign,stop_merged_headsign,mean_duration_factor,mean_duration_offset,safe_duration_factor,safe_duration_offset,pickup_booking_rule_id,drop_off_booking_rule_id,location_id,location_group_id
+1//99,0,,castlegar-tc,0,1,,,,,,,,,,,,,,,
+1//99,1,,nelson-tc,1,0,,,,,,,,,,,,,,,
+1//3,0,,nelson-tc,0,1,,,,,,,,,,,,,,,
+1//3,1,,3-08,0,0,,,,,,,,,,,,,,,
+1//3,2,,3-12,0,0,,,,,,,,,,,,,,,
+1//3,3,,nelson-tc,1,0,,,,,,,,,,,,,,,
+2//99,0,,nelson-tc,0,1,,,,,,,,,,,,,,,
+2//99,1,,castlegar-tc,1,0,,,,,,,,,,,,,,,

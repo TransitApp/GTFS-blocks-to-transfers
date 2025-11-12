@@ -8,11 +8,12 @@ def process(in_dir,
             use_simplify_linear=False,
             remove_existing_files=False,
             sorted_io=False,
+            itineraries=False,
             ):
-    gtfs = gtfs_loader.load(in_dir, sorted_read=sorted_io)
+    gtfs = gtfs_loader.load(in_dir, sorted_read=sorted_io, itineraries=itineraries)
 
     services = service_days.ServiceDays(gtfs)
-    converted_transfers = convert_blocks.convert(gtfs, services)
+    converted_transfers = convert_blocks.convert(gtfs, services, itineraries=itineraries)
     classify_transfers.classify(gtfs, converted_transfers)
 
     graph = simplify_fix.simplify(gtfs, services, converted_transfers)
@@ -21,14 +22,14 @@ def process(in_dir,
         output_graph = simplify_linear.simplify(graph)
     else:
         output_graph = graph
-    simplify_export.export_visit(output_graph)
+    simplify_export.export_visit(output_graph, itineraries=itineraries)
 
-    set_pickup_drop_off.set_pickup_drop_off(gtfs)
+    set_pickup_drop_off.set_pickup_drop_off(gtfs, itineraries=itineraries)
 
     if remove_existing_files:
         shutil.rmtree(out_dir, ignore_errors=True)
 
     gtfs_loader.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir, 
-            sorted_output=sorted_io)
+            sorted_output=sorted_io, itineraries=itineraries)
 
     print('Done.')
