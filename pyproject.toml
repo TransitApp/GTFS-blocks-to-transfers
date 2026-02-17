@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gtfs-blocks-to-transfers"
+version = "1.8.2"
+description = "Convert GTFS blocks to trip-to-trip transfers"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Nicholas Paun"}
+]
+requires-python = ">=3.10"
+dependencies = [
+    "py-gtfs-loader>=0.3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "flake8",
+    "pytest",
+]
+
+[project.urls]
+Homepage = "https://github.com/TransitApp/GTFS-blocks-to-transfers"
+
+[project.scripts]
+gtfs-blocks-to-transfers = "blocks_to_transfers.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["blocks_to_transfers*"]

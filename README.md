@@ -8,11 +8,11 @@ Usage: `./convert.py <input feed> <directory for output>`
 
 The easiest way to install the tool is to clone this repository, then run `pip install -e .`
 
-If that doesn't work, try to run `python3 manual_install.py`. 
+If that doesn't work, try to run `python3 manual_install.py`.
 
-## Uploading package to PyPI
+## Publishing
 
-Run `tools/upload.sh`
+Package publishing is automated via GitHub Actions. Bump the version in `pyproject.toml` and merge to master to trigger publication to PyPI.
 
 ## How it works
 
