@@ -9,6 +9,7 @@ def process(in_dir,
             remove_existing_files=False,
             sorted_io=False,
             itineraries=False,
+            export_compressed=False,
             ):
     gtfs = gtfs_loader.load(in_dir, sorted_read=sorted_io, itineraries=itineraries)
 
@@ -30,6 +31,6 @@ def process(in_dir,
         shutil.rmtree(out_dir, ignore_errors=True)
 
     gtfs_loader.patch(gtfs, gtfs_in_dir=in_dir, gtfs_out_dir=out_dir, 
-            sorted_output=sorted_io, itineraries=itineraries)
+            sorted_output=sorted_io, itineraries=itineraries, export_compressed=export_compressed)
 
     print('Done.')
